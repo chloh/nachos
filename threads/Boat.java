@@ -4,6 +4,20 @@ import nachos.ag.BoatGrader;
 public class Boat
 {
     static BoatGrader bg;
+    static int boatLocation; // Oahu = 0, Molokai = 1
+    static int numPeople;
+    static int numChildrenOnOahu;
+    static int numChildrenOnMolokai;
+    static int numAdultsOnOahu;
+    static int numAdultsOnMolokai;
+    static int numChildrenOnBoat;
+    static CV waitOnOahu;
+    static CV waitOnMolokai;
+    static CV waitOnBoatChildren;
+    static Lock lock;
+    static Hashtable locations; // keys: thread, values: location (Oahu = 0, Molokai = 1)
+    static boolean gameOver;
+    static Communicator communicator; 
     
     public static void selfTest()
     {
@@ -26,18 +40,56 @@ public class Boat
 	bg = b;
 
 	// Instantiate global variables here
-	
+	boatLocation = 0;
+	numPeople = adults + children;
+	numChildrenOnOahu = 0;
+	//numChildrenOnOahu = children;
+	numChildrenOnMolokai = 0;
+	numAdultsOnOahu = 0;
+	//numAdultsOnOahu = adults;
+	numAdultsOnMolokai = 0;
+	numChildrenOnBoat = 0;
+	lock = new Lock();
+	waitOnOahu = new CV(lock);
+	waitOnMolokai = new CV(lock);
+	waitOnBoatChildren = new CV(lock);
+	locations = new Hashtable(); // should use generics
+	gameOver = false;	
 	// Create threads here. See section 3.4 of the Nachos for Java
 	// Walkthrough linked from the projects page.
+	    KThread t = null;
+    	Runnable r = null;
+    	for(int i = 0; i < adults; i++) {
+       	r = new Runnable() {
+        		public void run() {
+                	AdultItinerary();
+            	}
+        	};
+    t = new KThread(r);
+        	t.setName("Adult " + i.toString());
+        	t.fork();
+    	locations.put(t, 0); // all adults start on Oahu
+    	}
+    	
+    	for(int j = 0; j < children; j++) {
+    	r = new Runnable() {
+        		public void run() {
+                	ChildItinerary();
+            	}
+        	};
+    t = new KThread(r);
+        	t.setName("Child " + j.toString());
+        	t.fork();
+    	locations.put(t, 0); // all children start on Oahu
+    }
+    while (true) {
+    	adultsOnMolokai = communicator.listen()
+    	childrenOnMolokai = communicator.listen()
 
-	Runnable r = new Runnable() {
-	    public void run() {
-                SampleItinerary();
-            }
-        };
-        KThread t = new KThread(r);
-        t.setName("Sample Boat Thread");
-        t.fork();
+    	if (adults==adultsOnMolokai && children==childrenOnMolokai) {
+    		gameOver = True;
+    		return
+    	}
 
     }
 
@@ -49,10 +101,149 @@ public class Boat
 	       bg.AdultRowToMolokai();
 	   indicates that an adult has rowed the boat across to Molokai
 	*/
+    	lock.acquire();
+    	if locations.get(currentThread) == 0 {
+    		numAdultsOnOahu++;
+    	}
+    	lock.release();
+    	lock.acquire();
+    	int currentLocation = locations.get(currentThread);
+
+    while(!gameOver) {
+
+    	// adults only act if they are on Oahu; if currentLocation == 0
+    	if(currentLocation == 1) { //Molokai = 1
+    		waitOnMolokai.sleep();
+    		continue;
+    	}
+
+    	// if the boat isn’t at the current location
+    	if(boatLocation != currentLocation) { 
+    		waitOnOahu.sleep();
+    		continue;
+    }
+
+    // if the boat is full
+    if(numChildrenOnBoat != 0) {
+    	waitOnOahu.sleep();
+    	continue;
+    }
+
+
+    // if there are enough children to send over
+    if(numChildrenOnOahu >= 2) {
+    	waitOnOahu.sleep();
+    	continue;
+    } else { // send adult to Molokai
+    bg.AdultRowToMolokai();
+
+    // this is the special case where the first thread is a single adult
+    if(numC == 0) row back, get off boat, wake all, yield; 
+    numAdultsOnOahu--;
+    boatLocation = 1;
+    change!
+    numAdultsOnMolokai++;
+    locations.remove(currentThread);
+    locations.put(currentThread, 1);
+    waitOnMolokai.wakeAll();
+    // adults never move back to Oahu so we don’t need this 
+    // thread anymore
+    break;
+    }
+    }
+    lock.release();
+    return;
     }
 
     static void ChildItinerary()
     {
+    	lock.acquire();
+    	if locations.get(currentThread) == 0 {
+    		numChildrenOnOahu++;
+    	} else {
+    		numChildrenOnMolokai++;
+    	}
+    	lock.release();
+
+    		lock.acquire();
+    		int currentLocation = locations.get(currentThread);
+    		CV currentCV;
+
+    	while(!gameOver) {
+
+    		// updating local current vars
+    		if(currentLocation == 0) {
+    			currentCV = waitOnOahu;
+    		} else {
+    			currentCV = waitOnMolokai;
+    		}
+    			
+    			// if the boat is not here
+    		if(boatLocation != currentLocation) {
+    			currentCV.sleep();
+    			continue;
+    	}
+
+    		
+    			// if the boat is full
+    	if(numChildrenOnBoat >= 2) {
+    		currentCV.sleep();
+    		continue;
+    	}
+
+
+    	if(currentLocation == 0) { // if child is on Oahu
+    		if(numChildrenOnOahu == 2) { 
+    	// This is only the end if adults = 0 also
+    			gameOver = true;
+    		}
+    		if(numChildrenOnBoat == 0) { // no children on boat
+    			if(numChildrenOnOahu >= 2) {
+    				numChildrenOnBoat++;
+    				numChildrenOnOahu--;
+    				bg.ChildRowToMolokai();
+    				waitOnBoatChildren.sleep();
+    				boatLocation = 1;
+    				numChildrenOnBoat--;
+    				numChildrenOnMolokai++;
+    				locations.remove(currentThread);
+    				locations.put(currentThread, 1);
+    				most up to date version!
+    				communicator.speak(numAdultsOnMolokai);
+    				communicator.speak(numChildrenOnMolokai);
+    				waitOnMolokai.wakeAll();
+    			} else {
+    				waitOnOahu.sleep();
+    				continue;
+    			}
+    		} else { // if one child on boat
+    			numChildrenOnBoat++;
+    			numChildrenOnOahu--;
+    			bg.ChildRideToMolokai();
+    			waitOnBoatChildren.wake();
+    			numChildrenOnBoat--;
+    			numChildrenOnMolokai++;
+    				locations.remove(currentThread);
+    				locations.put(currentThread, 1);
+    	}
+    	} else { // if the child is on Molokai
+    		if(numChildrenOnBoat == 0) { // no children on boat
+    			// don’t need to increment/decrement 
+    	// numChildrenOnBoat
+    	numChildrenOnMolokai--;
+    	bg.ChildRowToOahu();
+    	boatLocation = 0;
+    	numChildrenOnOahu++;
+    	locations.remove(currentThread);
+    	locations.put(currentThread, 0);
+    	waitOnOahu.wakeAll();
+    	} else { // there is already one child on the boat
+    		waitOnMolokai.sleep();
+    		continue;
+    	}
+    	}
+    		currentThread.ready(); // add child back to ready queue
+    	}
     }
 
     static void SampleItinerary()
