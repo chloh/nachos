@@ -194,9 +194,9 @@ public class KThread {
 
 	currentThread.status = statusFinished;
 	
-	joinLock.acquire();
-	joinCV.wakeAll();
-	joinLock.release();
+	currentThread.joinLock.acquire();
+	currentThread.joinCV.wakeAll();
+	currentThread.joinLock.release();
 	
 	sleep();
     }
