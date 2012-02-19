@@ -14,6 +14,10 @@ public class Communicator {
      * Allocate a new communicator.
      */
     public Communicator() {
+    	lock = new Lock();
+    	CVSpeak = new Condition(lock);
+    	CVListen = new Condition(lock);
+    	CVBoth = new Condition(lock);
     }
 
     /**
@@ -27,6 +31,17 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
+    	lock.acquire();
+    	while(currentSpeaker != null) CVSpeak.sleep();
+    	msg = word;
+    	currentSpeaker = KThread.currentThread();
+    	if(currentListener == null) CVBoth.sleep();
+    	else CVBoth.wake();
+    	currentListener.join();
+    	currentSpeaker = null;
+    	CVSpeak.wake();
+    	lock.release();
+    	return;
     }
 
     /**
@@ -36,6 +51,21 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-	return 0;
+    	lock.acquire();
+    	while(currentListener != null) CVListen.sleep();
+    	currentListener = KThread.currentThread();
+    	if(currentSpeaker == null) CVBoth.sleep();
+    	else CVBoth.wake();
+    	int out = msg;
+    	currentListener = null;
+    	CVListen.wake();
+    	lock.release();
+    	lock.
+    	return out;
     }
+    
+    private Lock lock;
+    private Condition CVSpeak, CVListen, CVBoth;
+    private KThread currentSpeaker, currentListener;
+    private int msg;
 }
