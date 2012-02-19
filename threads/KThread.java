@@ -414,8 +414,22 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 	
-	new KThread(new PingTest(1)).setName("forked thread").fork();
-	new PingTest(0).run();
+        //new KThread(new PingTest(1)).setName("forked thread").fork();
+	//new PingTest(0).run();
+        
+        //Uncomment below to test KThread module
+        //KThreadSimpleTest.runTest();
+        
+        //Uncomment below to test Condition2 module
+        //Condition2Test.runTest();
+        
+        //Uncomment below to test Alarm module
+        //AlarmTest.runTest();
+        
+        //Tests Communicator module
+        CommunicatorTest.runTest();
+
+        
     }
 
     private static final char dbgThread = 't';
