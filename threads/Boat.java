@@ -130,7 +130,7 @@ public class Boat
 				return;
 			}
 
-			// if the boat isn’t at the current location
+			// if the boat isn't at the current location
 			if(boatLocation != currentLocation) { 
 				waitOnOahu.sleep();
 				continue;
@@ -168,7 +168,7 @@ public class Boat
 					continue;
 				} else {
 					waitOnMolokai.wakeAll();
-					// adults never move back to Oahu so we don’t need this 
+					// adults never move back to Oahu so we don't need this 
 					// thread anymore
 					break;
 				}
@@ -259,7 +259,7 @@ public class Boat
 				}
 			} else { // if the child is on Molokai
 				if(numChildrenOnBoat == 0) { // no children on boat
-					// don’t need to increment/decrement 
+					// don't need to increment/decrement 
 					// numChildrenOnBoat
 					numChildrenOnMolokai--;
 					bg.ChildRowToOahu();
