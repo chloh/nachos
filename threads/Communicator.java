@@ -50,7 +50,9 @@ public class Communicator {
     	}
     	*/
     	//currentSpeaker = null;
-    	CVSpeak.wake();
+    	
+    	// I don't think we need this line of code
+    	//CVSpeak.wake();
     	lock.release();
     	return;
     }
