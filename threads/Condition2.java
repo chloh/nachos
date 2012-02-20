@@ -53,6 +53,10 @@ public class Condition2 {
     public void wakeAll() {
 	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
     }
+    
+    public static void selfTest(){
+      Condition2Test.runTest();
+    }
 
     private Lock conditionLock;
 }
