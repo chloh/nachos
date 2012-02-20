@@ -148,31 +148,11 @@ public class PriorityScheduler extends Scheduler {
 
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
-			/*
-			ThreadState nextTS = null; //next threadstate to return
-			ThreadState intTS;
-			int interPriority; //intermediate priority variable
-			int maxPriority = -1; //max priority
 			
-			for (int i = 0; i < this.waitQueue.size(); i++) {
-				// should use iterator instead
-				intTS = waitQueue.get(i); //intermediate threadState pointer
-				if (transferPriority) { //if transferPriority is true use effective priority
-					interPriority = intTS.getEffectivePriority();
-				} else {
-					interPriority = intTS.getPriority();
-				}
-				if (interPriority > maxPriority) {
-					nextTS = intTS;
-					maxPriority = interPriority;
-				}
-			}
-			*/
 			ThreadState nextTS = pickNextThread();
 			this.waitQueue.remove(nextTS);
-			this.updatePQ();
-			this.resourceHolder().updateEffectivePriority(this);
-			// do we need this thread to call acquire?
+			this.acquire(waitQueue);
+			
 			return nextTS.thread;
 		}
 
@@ -182,22 +162,18 @@ public class PriorityScheduler extends Scheduler {
 		}
 
 		/** UPDATE THIS PRIORITYQUEUES MAX EFFECTIVE PRIORITY **/
-		protected void updatePQ() {
-			this.maxEffectivePriority = -1;  // suck it anthony
+		protected int getPQ() {
+			int maxEffectivePriority = -1;
 			ThreadState thisTS;
-			
-			for (int i = 0; i < this.waitQueue.size(); i++) {
+			if (transferPriority) {
+			    for (int i = 0; i < this.waitQueue.size(); i++) {
 				thisTS = waitQueue.get(i);
-				if(transferPriority) {
-					if (thisTS.getEffectivePriority() > this.maxEffectivePriority){
-						this.maxEffectivePriority = thisTS.getEffectivePriority();
-					}
-				} else {
-					if (thisTS.getPriority() > this.maxEffectivePriority){
-						this.maxEffectivePriority = thisTS.getPriority();
-					}
+				if (thisTS.getEffectivePriority() > maxEffectivePriority){
+					maxEffectivePriority = thisTS.getEffectivePriority();
 				}
+			    }
 			}
+			return maxEffectivePriority;
 		}
 
 
@@ -255,7 +231,6 @@ public class PriorityScheduler extends Scheduler {
 		public boolean transferPriority;
 		protected LinkedList<ThreadState> waitQueue;
 		protected ThreadState resourceHolder;
-		protected int maxEffectivePriority;
 	}
 
 	/**
@@ -303,8 +278,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public void updateEffectivePriority(PriorityQueue waitQueue) {
 			// Update your hashtable with this effective priority
-			waitQueue.updatePQ();
-			int maxPriority = waitQueue.maxEffectivePriority;
+			int maxPriority = waitQueue.getPQ();
 			this.resourcePriorities.put(waitQueue,maxPriority);
 
 			// Find the max priority of your resources after update
@@ -312,8 +286,8 @@ public class PriorityScheduler extends Scheduler {
 			Integer[] allVals = (Integer []) allValues.toArray();
 			int maxP = this.priority;
 			int thisP;
-			for (int idx = 0; idx < resourcePriorities.size(); idx++) {
-				thisP = allVals[idx].intValue();
+			for (int i = 0; i < resourcePriorities.size(); i++) {
+				thisP = allVals[i].intValue();
 				if (thisP > maxP) {
 					maxP = thisP;
 				}
@@ -336,10 +310,13 @@ public class PriorityScheduler extends Scheduler {
 		public void setPriority(int priority) {
 			if (this.priority == priority)
 				return;
-
 			this.priority = priority;
-			this.updateEffectivePriority(this.waitForAccessQueue);
-			// implement me
+			
+			if(this.waitForAccessQueue != null){
+			    if(this.waitForAccessQueue.transferPriority){
+			        this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+			    }
+			}
 		}
 
 		/**
@@ -357,20 +334,11 @@ public class PriorityScheduler extends Scheduler {
 		public void waitForAccess(PriorityQueue waitQueue) {
 			waitQueue.waitQueue.add(this);
 			this.waitForAccessQueue = waitQueue;
-			// find new max effective priority for this waitQueue
-			if (waitQueue.transferPriority) {
-				if (this.getEffectivePriority() > waitQueue.maxEffectivePriority) {
-					waitQueue.maxEffectivePriority = this.getEffectivePriority();
-				}
-			} else {
-				if (this.getPriority() > waitQueue.maxEffectivePriority) {
-					waitQueue.maxEffectivePriority = this.getPriority();
-				}
+			
+			if (waitQueue.transferPriority){
+			    ThreadState rHolder = waitQueue.resourceHolder();
+			    rHolder.updateEffectivePriority(waitQueue);
 			}
-
-			// Update the resource Holder
-			ThreadState rHolder = waitQueue.resourceHolder();
-			rHolder.updateEffectivePriority(waitQueue);
 		}
 
 		/**
@@ -385,7 +353,10 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public void acquire(PriorityQueue waitQueue) {
 			this.waitForAccessQueue = null;
-			this.updateEffectivePriority(waitQueue);
+			this.resourceHolder = this;
+			if (waitQueue.transferPriority){
+			    this.updateEffectivePriority(waitQueue);
+			}
 		}	
 
 		/** The thread with which this object is associated. */	   
