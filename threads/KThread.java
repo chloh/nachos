@@ -445,16 +445,16 @@ public class KThread {
      * Gets the priority of a thread()
      */
     public int getPriority() {
-        /* Disable interrupts */
-        boolean intStatus = Machine.interrupt().disable();
+    	/* Disable interrupts */
+    	boolean intStatus = Machine.interrupt().disable();
 
-        /* Talk to the scheduler */
-        int priority = ThreadedKernel.scheduler.getPriority(this);
+    	/* Talk to the scheduler */
+    	int priority = ThreadedKernel.scheduler.getPriority(this);
 
-        /* Restore interrupts */
-        Machine.interrupt().restore(intStatus);
+    	/* Restore interrupts */
+    	Machine.interrupt().restore(intStatus);
 
-          return priority;
+    	return priority;
     }
     private static final char dbgThread = 't';
 
