@@ -432,6 +432,32 @@ public class KThread {
 	//AlarmTest.runTest();
     }
 
+    public void setPriority(int priority) {
+        /* Disable interrupts */
+        boolean intStatus = Machine.interrupt().disable();
+
+        /* Talk to the scheduler */
+        ThreadedKernel.scheduler.setPriority(this, priority);
+
+        /* Restore interrupts */
+        Machine.interrupt().restore(intStatus);
+    }
+
+    /**
+     * Gets the priority of a thread()
+     */
+    public int getPriority() {
+        /* Disable interrupts */
+        boolean intStatus = Machine.interrupt().disable();
+
+        /* Talk to the scheduler */
+        int priority = ThreadedKernel.scheduler.getPriority(this);
+
+        /* Restore interrupts */
+        Machine.interrupt().restore(intStatus);
+
+          return priority;
+    }
     private static final char dbgThread = 't';
 
     /**
