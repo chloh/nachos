@@ -22,11 +22,15 @@ public class Alarm {
 			public void run() { timerInterrupt(); }
 		});
 		lock = new Lock();
-		this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>(){
-			public int compare(KThread t0, KThread t1){
-				if(t0.time < t1.time) return 1;
-				if(t0.time > t1.time) return -1;
-				else return 0;
+		this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>() {
+			public int compare(KThread t0, KThread t1) {
+				if(t0.time < t1.time) {
+					return 1;
+				} else if (t0.time > t1.time) {
+					return -1;
+				} else {
+					return 0;
+				}
 			}
 		}
 		);
@@ -42,19 +46,21 @@ public class Alarm {
 	public void timerInterrupt() {
 		long currentTime = Machine.timer().getTime();
 		long wakeTime;
+		KThread thread;
+		
 		lock.acquire();
-		while(!waitQueue.isEmpty()){
-			KThread thread = waitQueue.poll();
+		while(!waitQueue.isEmpty()) {
+			thread = waitQueue.poll();
 			wakeTime = thread.time;
-			if(wakeTime <= currentTime) thread.ready();
-			else {
+			if(wakeTime <= currentTime) {
+				thread.ready();
+			} else {
 				waitQueue.offer(thread);
 				break;
 			}
 
 		}
 		lock.release();
-
 	}
 
 	/**
