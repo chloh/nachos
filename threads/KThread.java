@@ -418,7 +418,7 @@ public class KThread {
 	//new PingTest(0).run();
 
 	//Uncomment below to test KThread module
-	KThreadSimpleTest.runTest();
+	//KThreadSimpleTest.runTest();
 
 	//Uncomment below to test Condition2 module
 	//Condition2Test.runTest();
