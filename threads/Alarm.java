@@ -79,7 +79,8 @@ public class Alarm {
 		currentThread.time = wakeTime;
 		waitQueue.add(currentThread);
 		lock.release();
-		KThread.sleep();
+		
+		KThread.yield();
 
 	}
 	private Lock lock;
