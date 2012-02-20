@@ -2,6 +2,7 @@ package nachos.threads;
 
 import nachos.machine.*;
 
+import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -128,6 +129,9 @@ public class PriorityScheduler extends Scheduler {
     protected class PriorityQueue extends ThreadQueue {
 	PriorityQueue(boolean transferPriority) {
 	    this.transferPriority = transferPriority;
+	    waitQueue = new LinkedList<ThreadState>;
+	    resourceHolder = null;
+	    maxEffectivePriority = -1;
 	}
 
 	public void waitForAccess(KThread thread) {
@@ -141,10 +145,50 @@ public class PriorityScheduler extends Scheduler {
 	}
 
 	public KThread nextThread() {
-	    Lib.assertTrue(Machine.interrupt().disabled());
-	    // implement me
-	    return null;
+   	    Lib.assertTrue(Machine.interrupt().disabled());
+	    ThreadState nextTS; //next threadstate to return
+	    int maxP = 0; //max priority
+	    for (int i = 0; i++; i<this.waitQueue.size()) {
+	     	    ThreadState intTS = waitQueue.get(i); //intermediate threadState pointer
+		    int intP; //intermediate priority variable
+	    	    if (transferPriority) { //if transferPriority is true use effective priority
+		 	intP = intThread.getEffectivePriority();
+		    } else {
+			intP = intThread.getPriority();
+		    }
+	   	    if (intPriority > maxP) {
+			nextTS = intTS;
+			maxP = intP;
+		    }
+	    }
+	    this.waitQueue.remove(nextTS);
+	    this.updatePQ();
+	    this.resourceHolder().updateEffectivePriority(this);
+	    return nextTS;
 	}
+
+	/**Get the threadstate which has acquired this resource**/
+	protected ThreadState resourceHolder() {
+                return resourceHolder;
+        }
+
+	/** UPDATE THIS PRIORITYQUEUES MAX EFFECTIVE PRIORITY **/
+        protected void updatePQ() {
+                this.maxEffectivePriority = -1;  // suck it anthony
+                for (int i = 0; i++;i<this.waitQueue.size()) {
+                        ThreadState thisTS = waitQueue.get(i);
+                        if(transferBoolean) {
+                                if (thisTS.getEffectivePriority() > this.maxEffectivePriority){
+                                        this.maxEffectivePriority = thisTS.getEffectivePriority();
+                                }
+                        } else {
+                                if (thisTS.getPriority() > this.maxEffectivePriority){
+                                        this.maxEffectivePriority = thisTS.getPriority();
+                                }
+                        }
+                }
+        }
+
 
 	/**
 	 * Return the next thread that <tt>nextThread()</tt> would return,
@@ -154,13 +198,38 @@ public class PriorityScheduler extends Scheduler {
 	 *		return.
 	 */
 	protected ThreadState pickNextThread() {
-	    // implement me
-	    return null;
+	    // Look at the thread on the top of the queue  
+            ThreadState nextTS;
+            int maxP = 0;
+            for (int i = 0; i++;i<this.waitQueue.size()) {
+                intTS = waitQueue.get(i);
+                int intP;
+                if (transferPriority) {
+                        intP = intTS.getEffectivePriority();
+                } else {
+                       intP = intTS.getPriority();
+                }
+                if (intP > maxP) {
+                        nextThread = intTS;
+                        maxP = intP;
+                }
+            }
+            return nextTS;
 	}
+
+	/** PRINT THAT SHIT **/
 	
 	public void print() {
 	    Lib.assertTrue(Machine.interrupt().disabled());
-	    // implement me (if you want)
+		for (int i = 0; i++;i<this.waitQueue.size()) {
+                intTS = waitQueue.get(i);
+                if (transferPriority) {
+                   System.out.println(intTS.getEffectivePriority());
+                } else {
+                   System.out.println(intTS.getPriority());
+                }
+            }
+            return;	    
 	}
 
 	/**
@@ -168,6 +237,9 @@ public class PriorityScheduler extends Scheduler {
 	 * threads to the owning thread.
 	 */
 	public boolean transferPriority;
+	protected LinkedList<ThreadState> waitQueue;
+	protected ThreadState resourceHolder;
+	protected int maxEffectivePriority;
     }
 
     /**
@@ -205,9 +277,40 @@ public class PriorityScheduler extends Scheduler {
 	 * @return	the effective priority of the associated thread.
 	 */
 	public int getEffectivePriority() {
-	    // implement me
-	    return priority;
+	    
+	    return effectivePriority;
 	}
+
+        /**
+         * BLah blah blac.
+         *
+         * @return      VOID
+         */
+        public void updateEffectivePriority(PriorityQueue waitQueue) {
+                // Update your hashtable with this effective priority
+                int maxPriority = waitQueue.updatePQ();
+                this.resourcePriorities.put(waitQueue,maxPriority);
+
+                // Find the max priority of your resources after update
+                Collection allValues = this.resourcePriorities.values();
+                int[] allVals = allValues.toArray();
+                int maxP = this.priority;
+                int thisP;
+                for (int idx = 0; idx++; idx < resourcePriorities.size()) {
+                        thisP = allVals[idx];
+                        if (thisP > maxP) {
+                                maxP = thisP;
+                        }
+                }
+
+                // Change this thread state's maxEffectivePriority (max donation)
+                this.effectivePriority = maxP;
+
+                // Now donate to the wait Queue that this thread state is waiting on.
+                if (this.waitForAccesQueue != null) {
+                        waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+                }
+        }
 
 	/**
 	 * Set the priority of the associated thread to the specified value.
@@ -219,7 +322,7 @@ public class PriorityScheduler extends Scheduler {
 		return;
 	    
 	    this.priority = priority;
-	    
+            this.updateEffectivePriority(this.waitQueue);
 	    // implement me
 	}
 
@@ -236,7 +339,22 @@ public class PriorityScheduler extends Scheduler {
 	 * @see	nachos.threads.ThreadQueue#waitForAccess
 	 */
 	public void waitForAccess(PriorityQueue waitQueue) {
-	    // implement me
+                waitQueue.waitQueue.add(this);
+                this.waitForAccessQueue = waitQueue;
+                // find new max effective priority for this waitQueue
+                if (transferPriority) {
+                        if (this.getEffectivePriority() > waitQueue.maxEffectivePriority) {
+                                waitQueue.maxEffectivePriority = this.getEffectivePriority();
+                        }
+                } else {
+                        if (this.getPriority() > waitQueue.maxEffectivePriority) {
+                                waitQueue.maxEffectivePriority = this.getPriority();
+                        }
+                }
+
+                // Update the resource Holder
+                ThreadState rHolder = waitQueue.resourceHolder();
+                rHolder.updateEffectivePriority(waitQueue);
 	}
 
 	/**
@@ -250,12 +368,16 @@ public class PriorityScheduler extends Scheduler {
 	 * @see	nachos.threads.ThreadQueue#nextThread
 	 */
 	public void acquire(PriorityQueue waitQueue) {
-	    // implement me
+	    this.waitForAccessQueue = null;
+	    this.updateEffectivePriority(waitQueue);
 	}	
 
 	/** The thread with which this object is associated. */	   
 	protected KThread thread;
 	/** The priority of the associated thread. */
 	protected int priority;
+	protected int effectivePriority;
+	protected HashTable<PriorityQueue,int> resourcePriorities;
+	protected PriorityQueue waitForAccessQueue;
     }
 }
