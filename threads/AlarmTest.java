@@ -9,7 +9,7 @@ import nachos.ag.*;
  * thread's wait time. Because the machine can only use one alarm at a time,
  * you need to use the ThreadedKernel's alarm. Using the alarm in a runnable
  * obj only affects the threads that uses it. So each thread will have their
- * a waitTime euqal to when they forked + x. This more than one thread can 
+ * a waitTime equal to when they forked + x. This more than one thread can 
  * have the same wakeup time and appear almost concurrently.
  *
  * A bad example is having Alarms object created and running in before or 
