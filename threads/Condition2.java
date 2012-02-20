@@ -39,7 +39,7 @@ public class Condition2 {
 	
     	boolean intStatus = Machine.interrupt().disable();
     	waitQueue.add(KThread.currentThread());
-    	KThread.currentThread().sleep();
+    	KThread.sleep();
     	Machine.interrupt().restore(intStatus);
 	
     	conditionLock.acquire();
