@@ -10,7 +10,7 @@ import java.util.LinkedList;
  * <p>
  * You must implement this.
  *
- * @see	nachos.threads.Condition
+ * @see nachos.threads.Condition
  */
 public class Condition2 {
 	/**
@@ -81,3 +81,4 @@ public class Condition2 {
 	private Lock conditionLock;
 	private LinkedList<KThread> waitQueue;
 }
+
