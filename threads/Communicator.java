@@ -18,6 +18,7 @@ public class Communicator {
     	CVSpeak = new Condition(lock);
     	CVListen = new Condition(lock);
     	CVBoth = new Condition(lock);
+    	newMessage = false;
     }
 
     /**
@@ -32,19 +33,25 @@ public class Communicator {
      */
     public void speak(int word) {
     	lock.acquire();
-    	while(currentSpeaker != null) {
+    	while(currentSpeaker != null || newMessage) {
     		CVSpeak.sleep();
     	}
     	msg = word;
+    	newMessage = true;
     	currentSpeaker = KThread.currentThread();
     	if(currentListener == null) {
     		CVBoth.sleep();
     	} else {
     		CVBoth.wake();
     	}
-    	currentListener.join();
+    	/*
+    	if (currentListener != null) {
+	    	currentListener.join();
+    	}
+    	*/
     	currentSpeaker = null;
     	CVSpeak.wake();
+    	CVListen.wake();
     	lock.release();
     	return;
     }
@@ -67,8 +74,10 @@ public class Communicator {
     		CVBoth.wake();
     	}
     	int out = msg;
+    	newMessage = false;
     	currentListener = null;
     	CVListen.wake();
+    	CVSpeak.wake();
     	lock.release();
     	return out;
     }
@@ -77,4 +86,5 @@ public class Communicator {
     private Condition CVSpeak, CVListen, CVBoth;
     private KThread currentSpeaker, currentListener;
     private int msg;
+    private boolean newMessage;
 }

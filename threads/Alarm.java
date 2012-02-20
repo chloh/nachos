@@ -25,9 +25,9 @@ public class Alarm {
 		this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>() {
 			public int compare(KThread t0, KThread t1) {
 				if(t0.time < t1.time) {
-					return 1;
-				} else if (t0.time > t1.time) {
 					return -1;
+				} else if (t0.time > t1.time) {
+					return 1;
 				} else {
 					return 0;
 				}
@@ -49,17 +49,21 @@ public class Alarm {
 		KThread thread;
 		
 		lock.acquire();
+		
 		while(!waitQueue.isEmpty()) {
 			thread = waitQueue.poll();
 			wakeTime = thread.time;
 			if(wakeTime <= currentTime) {
+				boolean intStatus = Machine.interrupt().disable();
 				thread.ready();
+				Machine.interrupt().restore(intStatus);
 			} else {
 				waitQueue.offer(thread);
 				break;
 			}
 
 		}
+		
 		lock.release();
 	}
 
@@ -86,7 +90,10 @@ public class Alarm {
 		waitQueue.add(currentThread);
 		lock.release();
 		
-		KThread.yield();
+		boolean intStatus = Machine.interrupt().disable();
+		KThread.sleep();
+		Machine.interrupt().restore(intStatus);
+		//KThread.yield();
 
 	}
 	private Lock lock;
