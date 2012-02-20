@@ -427,7 +427,9 @@ public class KThread {
         //AlarmTest.runTest();
         
         //Tests Communicator module
-        CommunicatorTest.runTest();
+        //CommunicatorTest.runTest();
+	
+		Boat.selfTest();
 
         
     }

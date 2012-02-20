@@ -52,6 +52,8 @@ public class Boat
 		waitOnBoatChildren = new Condition(lock);
 		locations = new Hashtable<KThread, Integer>();
 		gameOver = false;	
+		communicator = new Communicator();
+		
 		// Create threads here. See section 3.4 of the Nachos for Java
 		// Walkthrough linked from the projects page.
 		KThread t = null;
