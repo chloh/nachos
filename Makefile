@@ -16,10 +16,10 @@ security =	Privilege NachosSecurityManager
 
 ag =		AutoGrader BoatGrader
 
-threads =	ThreadedKernel KThread Alarm \
+threads =	ThreadedKernel KThread KThreadSimpleTest Alarm AlarmTest\
 		Scheduler ThreadQueue RoundRobinScheduler \
 		Semaphore Lock Condition SynchList \
-		Condition2 Communicator Rider ElevatorController \
+		Condition2 Condition2Test Communicator CommunicatorTest Rider ElevatorController \
 		PriorityScheduler LotteryScheduler Boat
 
 userprog =	UserKernel UThread UserProcess SynchConsole
