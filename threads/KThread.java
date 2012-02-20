@@ -194,6 +194,10 @@ public class KThread {
 
 	currentThread.status = statusFinished;
 	
+	joinLock.acquire();
+	joinCV.wakeAll();
+	joinLock.release();
+	
 	sleep();
     }
 
@@ -276,6 +280,13 @@ public class KThread {
 	Lib.debug(dbgThread, "Joining to thread: " + toString());
 
 	Lib.assertTrue(this != currentThread);
+	joinLock.acquire();
+	if(this.status == statusFinished){
+		return;
+	} else {
+		joinCV.sleep();
+	}
+	joinLock.release();
 
     }
 
@@ -444,4 +455,10 @@ public class KThread {
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
+    
+    private Lock joinLock = new Lock();
+    private Condition joinCV = new Condition(joinLock);
+    public long time;
+    
+    
 }
