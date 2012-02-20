@@ -42,6 +42,7 @@ public class Communicator {
     		CVBoth.sleep();
     	} else {
     		CVBoth.wake();
+    		CVBoth.sleep();
     	}
     	/* removed this because waiting for the other thread to 
     	 * completely finish is wrong
@@ -71,6 +72,7 @@ public class Communicator {
     	currentListener = KThread.currentThread();
     	if(currentSpeaker == null) {
     		CVBoth.sleep();
+    		CVBoth.wake();
     	} else {
     		CVBoth.wake();
     	}

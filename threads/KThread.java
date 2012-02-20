@@ -425,10 +425,10 @@ public class KThread {
 
 	//Uncomment below to test Alarm module
 	//AlarmTest.runTest();
-	AlarmTest2.runTest();
+	//AlarmTest2.runTest();
 
 	//Tests Communicator module
-	//CommunicatorTest.runTest();
+	CommunicatorTest.runTest();
     }
 
     public void setPriority(int priority) {

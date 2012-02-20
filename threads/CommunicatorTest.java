@@ -158,7 +158,7 @@ public class CommunicatorTest extends AutoGrader{
 	private static final int numRVThreads = 4;
 
 	/* Number of RV actions per thread */
-	private static final int howMany = 10;
+	private static final int howMany = 5;
 
 	/* Bounds on delay between attempts to speak/listen */
 	private static final int minDelay = 0;

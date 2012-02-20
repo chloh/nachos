@@ -51,7 +51,7 @@ public class AlarmTest extends AutoGrader{
 		System.out.println("**** Alarm testing begins ****");
 
 		//wait intervals
-		long wTime1=50000;
+		long wTime1=5;
 		long wTime2=300000;
 		long wTime3=1000000;
 
