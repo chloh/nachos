@@ -424,12 +424,10 @@ public class KThread {
 	//Condition2Test.runTest();
 
 	//Uncomment below to test Alarm module
-	//AlarmTest.runTest();
+	AlarmTest.runTest();
 
 	//Tests Communicator module
-	CommunicatorTest.runTest();
-
-	//AlarmTest.runTest();
+	//CommunicatorTest.runTest();
     }
 
     private static final char dbgThread = 't';

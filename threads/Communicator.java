@@ -33,25 +33,24 @@ public class Communicator {
      */
     public void speak(int word) {
     	lock.acquire();
-    	while(currentSpeaker != null || newMessage) {
+    	while(currentSpeaker != null) {
     		CVSpeak.sleep();
     	}
     	msg = word;
-    	newMessage = true;
     	currentSpeaker = KThread.currentThread();
     	if(currentListener == null) {
     		CVBoth.sleep();
     	} else {
     		CVBoth.wake();
     	}
-    	/*
+    	/* removed this because waiting for the other thread to 
+    	 * completely finish is wrong
     	if (currentListener != null) {
 	    	currentListener.join();
     	}
     	*/
-    	currentSpeaker = null;
+    	//currentSpeaker = null;
     	CVSpeak.wake();
-    	CVListen.wake();
     	lock.release();
     	return;
     }
@@ -74,8 +73,9 @@ public class Communicator {
     		CVBoth.wake();
     	}
     	int out = msg;
-    	newMessage = false;
     	currentListener = null;
+    	currentSpeaker = null;
+    	
     	CVListen.wake();
     	CVSpeak.wake();
     	lock.release();

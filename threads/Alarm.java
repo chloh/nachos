@@ -85,6 +85,7 @@ public class Alarm {
 		// for now, cheat just to get something working (busy waiting is bad)
 		long wakeTime = Machine.timer().getTime() + x;
 		KThread currentThread = KThread.currentThread();
+		
 		lock.acquire();
 		currentThread.time = wakeTime;
 		waitQueue.add(currentThread);
@@ -93,7 +94,6 @@ public class Alarm {
 		boolean intStatus = Machine.interrupt().disable();
 		KThread.sleep();
 		Machine.interrupt().restore(intStatus);
-		//KThread.yield();
 
 	}
 	private Lock lock;
