@@ -18,7 +18,6 @@ public class Communicator {
     	CVSpeak = new Condition(lock);
     	CVListen = new Condition(lock);
     	CVBoth = new Condition(lock);
-    	newMessage = false;
     }
 
     /**
@@ -90,5 +89,4 @@ public class Communicator {
     private Condition CVSpeak, CVListen, CVBoth;
     private KThread currentSpeaker, currentListener;
     private int msg;
-    private boolean newMessage;
 }

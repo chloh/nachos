@@ -48,23 +48,25 @@ public class Alarm {
 		long wakeTime;
 		KThread thread;
 		
-		lock.acquire();
+		//lock.acquire();
 		
+		boolean intStatus = Machine.interrupt().disable();
 		while(!waitQueue.isEmpty()) {
 			thread = waitQueue.poll();
 			wakeTime = thread.time;
 			if(wakeTime <= currentTime) {
-				boolean intStatus = Machine.interrupt().disable();
+				//boolean intStatus = Machine.interrupt().disable();
 				thread.ready();
-				Machine.interrupt().restore(intStatus);
+				//Machine.interrupt().restore(intStatus);
 			} else {
 				waitQueue.offer(thread);
 				break;
 			}
 
 		}
+		Machine.interrupt().restore(intStatus);
 		
-		lock.release();
+		//lock.release();
 	}
 
 	/**
@@ -86,12 +88,12 @@ public class Alarm {
 		long wakeTime = Machine.timer().getTime() + x;
 		KThread currentThread = KThread.currentThread();
 		
-		lock.acquire();
+		boolean intStatus = Machine.interrupt().disable();
+		//lock.acquire();
 		currentThread.time = wakeTime;
 		waitQueue.add(currentThread);
-		lock.release();
+		//lock.release();
 		
-		boolean intStatus = Machine.interrupt().disable();
 		KThread.sleep();
 		Machine.interrupt().restore(intStatus);
 
