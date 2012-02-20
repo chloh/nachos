@@ -21,7 +21,7 @@ public class Alarm {
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() { timerInterrupt(); }
 		});
-		lock = new Lock();
+		//lock = new Lock();
 		this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>() {
 			public int compare(KThread t0, KThread t1) {
 				if(t0.time < t1.time) {
@@ -98,6 +98,6 @@ public class Alarm {
 		Machine.interrupt().restore(intStatus);
 
 	}
-	private Lock lock;
+	//private Lock lock;
 	private PriorityQueue<KThread> waitQueue;
 }

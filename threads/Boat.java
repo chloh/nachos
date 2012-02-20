@@ -1,5 +1,7 @@
 package nachos.threads;
 import nachos.ag.BoatGrader;
+import nachos.machine.Lib;
+
 import java.util.Hashtable;
 
 public class Boat
@@ -23,14 +25,17 @@ public class Boat
 	{
 		BoatGrader b = new BoatGrader();
 
-		System.out.println("\n ***Testing Boats with only 2 children***");
-		begin(0, 2, b);
+		//System.out.println("\n ***Testing Boats with only 2 children***");
+		//begin(0, 2, b);
 
-		//	System.out.println("\n ***Testing Boats with 2 children, 1 adult***");
-		//  	begin(1, 2, b);
+		//System.out.println("\n ***Testing Boats with 2 children, 1 adult***");
+	  	//begin(1, 2, b);
 
-		//  	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
-		//  	begin(3, 3, b);
+		//System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
+		//begin(3, 3, b);
+		
+		System.out.println("\n ***Testing Boats with 50 children, 25 adults***");
+		begin(50, 25, b);
 	}
 
 	public static void begin( int adults, int children, BoatGrader b )
@@ -119,9 +124,10 @@ public class Boat
 		
 		lock.acquire();
 		currentThread = KThread.currentThread();
-		int currentLocation = locations.get(currentThread);
+		int currentLocation;
 
 		while(!gameOver) {
+			currentLocation = locations.get(currentThread);
 
 			// adults only act if they are on Oahu; if currentLocation == 0
 			if(currentLocation == 1) { //Molokai = 1
@@ -194,10 +200,12 @@ public class Boat
 		KThread.yield();
 
 		lock.acquire();
-		int currentLocation = locations.get(currentThread);
+		currentThread = KThread.currentThread();
+		int currentLocation;
 		Condition currentCV;
 
 		while(!gameOver) {
+			currentLocation = locations.get(currentThread);
 
 			// updating local current vars
 			if(currentLocation == 0) {
@@ -231,11 +239,12 @@ public class Boat
 						numChildrenOnOahu--;
 						bg.ChildRowToMolokai();
 						waitOnBoatChildren.sleep();
-						boatLocation = 1;
+						//boatLocation = 1;
 						numChildrenOnBoat--;
 						numChildrenOnMolokai++;
 						locations.remove(currentThread);
 						locations.put(currentThread, 1);
+						Lib.debug('t', "help!");
 						
 						if (lastTwo) {
 							communicator.speak(numAdultsOnMolokai);
@@ -251,11 +260,13 @@ public class Boat
 					numChildrenOnBoat++;
 					numChildrenOnOahu--;
 					bg.ChildRideToMolokai();
+					boatLocation = 1;
 					waitOnBoatChildren.wake();
 					numChildrenOnBoat--;
 					numChildrenOnMolokai++;
 					locations.remove(currentThread);
 					locations.put(currentThread, 1);
+					Lib.debug('t', "help2!");
 				}
 			} else { // if the child is on Molokai
 				if(numChildrenOnBoat == 0) { // no children on boat
