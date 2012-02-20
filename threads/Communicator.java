@@ -60,7 +60,6 @@ public class Communicator {
     	currentListener = null;
     	CVListen.wake();
     	lock.release();
-    	lock.
     	return out;
     }
     
