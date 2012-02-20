@@ -66,6 +66,10 @@ public class Condition2 {
 	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 	while(!waitQueue.isEmpty()) wake();
     }
+    
+    public static void selfTest(){
+      Condition2Test.runTest();
+    }
 
     private Lock conditionLock;
     private LinkedList<KThread> waitQueue;
