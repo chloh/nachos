@@ -194,9 +194,9 @@ public class KThread {
 
 	currentThread.status = statusFinished;
 	
-	joinLock.acquire();
-	joinCV.wakeAll();
-	joinLock.release();
+	currentThread.joinLock.acquire();
+	currentThread.joinCV.wakeAll();
+	currentThread.joinLock.release();
 	
 	sleep();
     }
@@ -414,8 +414,10 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 	
-	new KThread(new PingTest(1)).setName("forked thread").fork();
-	new PingTest(0).run();
+        //new KThread(new PingTest(1)).setName("forked thread").fork();
+	//new PingTest(0).run();
+        //CommunicatorTest.runTest();
+        AlarmTest.runTest();
     }
 
     private static final char dbgThread = 't';
