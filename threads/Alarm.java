@@ -16,18 +16,20 @@ public class Alarm {
      * <p><b>Note</b>: Nachos will not function correctly with more than one
      * alarm.
      */
+
     public Alarm() {
     	Machine.timer().setInterruptHandler(new Runnable() {
     		public void run() { timerInterrupt(); }
 	    });
     	lock = new Lock();
-    	waitQueue = new PriorityQueue<KThread>(10, new Comparator(){
-    		int compareTo(KThread t0, KThread t1){
+    	this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>(){
+    		public int compare(KThread t0, KThread t1){
     			if(t0.time < t1.time) return 1;
     			if(t0.time > t1.time) return -1;
     			else return 0;
     		}
-    	};)
+    	}
+        );
     	
     }
 
@@ -42,6 +44,7 @@ public class Alarm {
     	lock.acquire();
     	while(!waitQueue.isEmpty()){
     		KThread thread = waitQueue.poll();
+                long wakeTime = thread.time;
     		if(wakeTime <= currentTime) thread.ready();
     		else {
     			waitQueue.offer(thread);
