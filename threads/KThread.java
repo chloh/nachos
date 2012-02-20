@@ -425,7 +425,9 @@ public class KThread {
 
 	//Uncomment below to test Alarm module
 	//AlarmTest.runTest();
-	//AlarmTest2.runTest();
+	
+	//don't use this test.  there are some problems with it
+	AlarmTest2.runTest();
 
 	//Tests Communicator module
 	CommunicatorTest.runTest();
