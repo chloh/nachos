@@ -148,7 +148,9 @@ public class PriorityScheduler extends Scheduler {
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			
-			this.resourceHolder().resourcePriorities.remove(waitQueue);
+			if (this.resourceHolder() == null) {
+				this.resourceHolder().resourcePriorities.remove(waitQueue);
+			}
 			
 			ThreadState nextTS = pickNextThread();
 			if(nextTS != null){

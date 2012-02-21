@@ -430,7 +430,10 @@ public class KThread {
 	//AlarmTest2.runTest();
 
 	//Tests Communicator module
-	CommunicatorTest.runTest();
+	//CommunicatorTest.runTest();
+	
+	//Tests 5
+	PrioritySchedulerTest.runTest();
 	
 	//Tests boat module
 	//BoatTest.runTest();
