@@ -150,6 +150,13 @@ public class PriorityScheduler extends Scheduler {
 			
 			if (this.resourceHolder() != null) {
 				this.resourceHolder().resourcePriorities.remove(waitQueue);
+				if(!this.resourceHolder().resourcePriorities.isEmpty()) {
+					//Lib.debug('t', "This thread has resourcePriorities");
+					PriorityQueue resourceQueue = this.resourceHolder().resourcePriorities.keys().nextElement();
+					if (resourceQueue.transferPriority) {
+						this.resourceHolder().updateEffectivePriority(resourceQueue);
+					}
+				}
 			}
 			
 			ThreadState nextTS = pickNextThread();
@@ -229,6 +236,8 @@ public class PriorityScheduler extends Scheduler {
 			for (int i = 0; i < this.waitQueue.size(); i++) {
 				// use an iterator
 				intTS = waitQueue.get(i);
+				Lib.debug('t', intTS.thread+": "+intTS.getEffectivePriority());
+				/*
 				if (transferPriority) {
 					//System.out.println(intTS.thread+": "+intTS.getEffectivePriority());
 					Lib.debug('t', intTS.thread+": "+intTS.getEffectivePriority());
@@ -236,6 +245,7 @@ public class PriorityScheduler extends Scheduler {
 					//System.out.println(intTS.thread+": "+intTS.getPriority());
 					Lib.debug('t', intTS.thread+": "+intTS.getPriority());
 				}
+				*/
 			}
 			return;	    
 		}
@@ -327,7 +337,9 @@ public class PriorityScheduler extends Scheduler {
 
 			// Now donate to the wait Queue that this thread state is waiting on.
 			if (this.waitForAccessQueue != null) {
-				waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+				if (waitForAccessQueue.resourceHolder() != null) {
+					waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+				}
 			}
 		}
 

@@ -528,13 +528,13 @@ public class PrioritySchedulerTest extends AutoGrader{
 		System.out.println("######################################\n");
 
 		/* A simple ping-pong test */
-		//runPingPongTest();
+		runPingPongTest();
 
 		/* Simplest priority donation test */
-		//runPriorityDonationTest1();
+		runPriorityDonationTest1();
 
 		/*  More sophisticated donation test */
-		//runPriorityDonationTest2();
+		runPriorityDonationTest2();
 
 		/*  Complex donation test */
 		runPriorityDonationTest3();
