@@ -324,6 +324,12 @@ public class PriorityScheduler extends Scheduler {
 				return;
 			this.priority = priority;
 			
+			//Now we need to update current thread state's priority
+			if(!this.resourcePriorities.isEmpty()) {
+				resourceQueue = this.resourcePriorities.keys().nextElement()
+				this.updateEffectivePriority(resourceQueue);
+			}
+
 			if(this.waitForAccessQueue != null){
 			    if(this.waitForAccessQueue.transferPriority){
 			        this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
