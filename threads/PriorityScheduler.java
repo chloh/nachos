@@ -149,11 +149,17 @@ public class PriorityScheduler extends Scheduler {
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			
-			ThreadState nextTS = pickNextThread();
-			this.waitQueue.remove(nextTS);
-			this.acquire(waitQueue);
+			waitQueue.resourceHolder().resourcePriorities.remove(waitQueue);
 			
-			return nextTS.thread;
+			ThreadState nextTS = pickNextThread();
+			if(nextTS != null){
+				this.waitQueue.remove(nextTS);
+				this.acquire(nextTS.thread);
+				return nextTS.thread;
+			}
+			else{
+				return null;
+			}
 		}
 
 		/**Get the threadstate which has acquired this resource**/
@@ -353,7 +359,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public void acquire(PriorityQueue waitQueue) {
 			this.waitForAccessQueue = null;
-			this.resourceHolder = this;
+			waitQueue.resourceHolder = this;
 			if (waitQueue.transferPriority){
 			    this.updateEffectivePriority(waitQueue);
 			}
