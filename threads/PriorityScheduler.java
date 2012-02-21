@@ -133,7 +133,6 @@ public class PriorityScheduler extends Scheduler {
 			this.transferPriority = transferPriority;
 			waitQueue = new LinkedList<ThreadState>();
 			resourceHolder = null;
-			maxEffectivePriority = -1;
 		}
 
 		public void waitForAccess(KThread thread) {
@@ -149,7 +148,7 @@ public class PriorityScheduler extends Scheduler {
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			
-			waitQueue.resourceHolder().resourcePriorities.remove(waitQueue);
+			this.resourceHolder().resourcePriorities.remove(waitQueue);
 			
 			ThreadState nextTS = pickNextThread();
 			if(nextTS != null){
