@@ -148,7 +148,7 @@ public class PriorityScheduler extends Scheduler {
 		public KThread nextThread() {
 			Lib.assertTrue(Machine.interrupt().disabled());
 			
-			if (this.resourceHolder() == null) {
+			if (this.resourceHolder() != null) {
 				this.resourceHolder().resourcePriorities.remove(waitQueue);
 			}
 			
@@ -289,16 +289,21 @@ public class PriorityScheduler extends Scheduler {
 			this.resourcePriorities.put(waitQueue,maxPriority);
 
 			// Find the max priority of your resources after update
-			Collection allValues = this.resourcePriorities.values();
-			Integer[] allVals = (Integer []) allValues.toArray();
+			Collection<Integer> allValues = this.resourcePriorities.values();
+			//Integer[] allVals = (Integer[]) allValues.toArray();
 			int maxP = this.priority;
-			int thisP;
-			for (int i = 0; i < resourcePriorities.size(); i++) {
+			for(Integer thisP: allValues){
+				if(thisP > maxP){
+					maxP = thisP;
+				}
+			}
+			//int thisP;
+			/*for (int i = 0; i < resourcePriorities.size(); i++) {
 				thisP = allVals[i].intValue();
 				if (thisP > maxP) {
 					maxP = thisP;
 				}
-			}
+			}*/
 
 			// Change this thread state's maxEffectivePriority (max donation)
 			this.effectivePriority = maxP;
