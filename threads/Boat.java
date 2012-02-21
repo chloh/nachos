@@ -31,7 +31,7 @@ public class Boat
 
 		//System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
 		//begin(3, 3, b);
-		
+
 		System.out.println("\n ***Testing Boats with 50 children, 25 adults***");
 		begin(50, 25, b);
 	}
@@ -56,7 +56,7 @@ public class Boat
 		locations = new Hashtable<KThread, Integer>();
 		gameOver = false;	
 		communicator = new Communicator();
-		
+
 		// Create threads here. See section 3.4 of the Nachos for Java
 		// Walkthrough linked from the projects page.
 		KThread t = null;
@@ -116,16 +116,16 @@ public class Boat
 			numAdultsOnOahu++;
 		}
 		lock.release();
-		
+
 		// allow other people to count themselves?
 		KThread.yield();
-		
+
 		lock.acquire();
 		currentThread = KThread.currentThread();
 		int currentLocation;
 
 		while(true) {
-                        currentLocation = locations.get(currentThread);
+			currentLocation = locations.get(currentThread);
 
 			// adults only act if they are on Oahu; if currentLocation == 0
 			if(currentLocation == 1) { //Molokai = 1
@@ -157,7 +157,7 @@ public class Boat
 				numAdultsOnMolokai++;
 				locations.remove(currentThread);
 				locations.put(currentThread, 1);
-				
+
 				// if no children on molokai
 				if (numChildrenOnMolokai == 0) {
 					bg.AdultRowToOahu();
@@ -166,7 +166,7 @@ public class Boat
 					numAdultsOnOahu++;
 					locations.remove(currentThread);
 					locations.put(currentThread, 0);
-					
+
 					waitOnOahu.wakeAll();
 					KThread.yield();
 					continue;
@@ -188,12 +188,12 @@ public class Boat
 		boolean lastTwo = false;
 		lock.acquire();
 		currentThread = KThread.currentThread();
-		
+
 		if (locations.get(currentThread) == 0) {
 			numChildrenOnOahu++;
 		}
 		lock.release();
-		
+
 		// let others count
 		KThread.yield();
 
@@ -202,7 +202,7 @@ public class Boat
 		Condition currentCV;
 
 		while(true) {
-                        currentLocation = locations.get(currentThread);
+			currentLocation = locations.get(currentThread);
 
 			// updating local current vars
 			if(currentLocation == 0) {
@@ -225,12 +225,12 @@ public class Boat
 
 
 			if(currentLocation == 0) { // if child is on Oahu
-				if(numChildrenOnOahu == 2) { 
+				if(numChildrenOnOahu == 2 && numAdultsOnOahu == 0) { 
 					// This is only the end if adults = 0 also
 					lastTwo = true;
 				}
 				if(numChildrenOnBoat == 0) { // no children on boat
-					
+
 					if(numChildrenOnOahu >= 2) {
 						numChildrenOnBoat++;
 						numChildrenOnOahu--;
@@ -240,7 +240,7 @@ public class Boat
 						numChildrenOnMolokai++;
 						locations.remove(currentThread);
 						locations.put(currentThread, 1);
-						
+
 						if (lastTwo) {
 							communicator.speak(numAdultsOnMolokai);
 							communicator.speak(numChildrenOnMolokai);
@@ -249,13 +249,14 @@ public class Boat
 						waitOnMolokai.wakeAll();
 					} else {
 						waitOnOahu.sleep();
+						//KThread.yield();
 						continue;
 					}
 				} else { // if one child on boat
 					numChildrenOnBoat++;
 					numChildrenOnOahu--;
 					bg.ChildRideToMolokai();
-                                        boatLocation = 1;
+					boatLocation = 1;
 					waitOnBoatChildren.wake();
 					numChildrenOnBoat--;
 					numChildrenOnMolokai++;
