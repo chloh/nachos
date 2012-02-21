@@ -270,12 +270,12 @@ public class PrioritySchedulerTest extends AutoGrader{
            deal with any locks */
 		PriorityDonationWorker workerMi = 
 			new PriorityDonationWorker("M-Priority",
-					false,2,new NamedLock[0]);
+					false,1,new NamedLock[0]);
 		/* Create a Low-priority thread that runs forever and deals
            with all locks */
 		PriorityDonationWorker workerLo = 
 			new PriorityDonationWorker("L-Priority",
-					false,1,locks);
+					false,0,locks);
 		/* Create a Hi-priority thread that runs once and deals
            with all locks */
 		PriorityDonationWorker workerHi = 
@@ -345,17 +345,17 @@ public class PrioritySchedulerTest extends AutoGrader{
 		/* Create a Mid-priority worker, runs forever, priority 6, no locks */
 		PriorityDonationWorker workerMi = 
 			new PriorityDonationWorker("Mid-Priority",
-					false,6,noLocks);
+					false,1,noLocks);
 
 		/* Create a Low-priority worker, runs forever, priority 7, all locks */
 		PriorityDonationWorker workerLo = 
 			new PriorityDonationWorker("Low-Priority",
-					false,7,allLocks);
+					false,0,allLocks);
 
 		/* Create a Higher-priority worker, runs once, priority 2, first lock */
 		PriorityDonationWorker workerHigher = 
 			new PriorityDonationWorker("Higher-Priority",
-					true,2,firstLock);
+					true,7,firstLock);
 
 		/* Create a Highest-priority worker, runs once, priority 1, second lock */
 		PriorityDonationWorker workerHighest = 
@@ -458,19 +458,19 @@ public class PrioritySchedulerTest extends AutoGrader{
 		NamedLock noLocks[] = new NamedLock[0];
 		PriorityDonationWorker workerMi = 
 			new PriorityDonationWorker("Mid-Priority",
-					false,6,noLocks);
+					false,1,noLocks);
 
 		/* Create a Mid-priority worker, runs forever, priority 7, all locks */
 		PriorityDonationWorker workerLo = 
 			new PriorityDonationWorker("Low-Priority",
-					false,7,allLocks);
+					false,0,allLocks);
 
 		/* Creating a bunch of high priority workers, each dealing
 		 * with a random subset of the locks */
 		PriorityDonationWorker workerHi[] =
 			new PriorityDonationWorker[testSize];
 		for (int i=0; i < testSize; i++) {
-			int priority = rng.nextInt(5);
+			int priority = rng.nextInt(3) + 5;
 			workerHi[i] =  new PriorityDonationWorker(
 					"High-Priority-"+i+"-"+priority,
 					true, priority,
@@ -528,13 +528,13 @@ public class PrioritySchedulerTest extends AutoGrader{
 		System.out.println("######################################\n");
 
 		/* A simple ping-pong test */
-		runPingPongTest();
+		//runPingPongTest();
 
 		/* Simplest priority donation test */
-		runPriorityDonationTest1();
+		//runPriorityDonationTest1();
 
 		/*  More sophisticated donation test */
-		runPriorityDonationTest2();
+		//runPriorityDonationTest2();
 
 		/*  Complex donation test */
 		runPriorityDonationTest3();

@@ -192,6 +192,8 @@ public class PriorityScheduler extends Scheduler {
 		 *		return.
 		 */
 		protected ThreadState pickNextThread() {
+			Lib.debug('t', "Choosing next thread");
+			this.print();
 			// Look at the thread on the top of the queue  
 			ThreadState nextTS = null;
 			ThreadState intTS;
@@ -202,11 +204,14 @@ public class PriorityScheduler extends Scheduler {
 				// should use iterator instead
 				intTS = waitQueue.get(i); //intermediate threadState pointer
 				
+				interPriority = intTS.getEffectivePriority();
+				/*
 				if (transferPriority) {
 					interPriority = intTS.getEffectivePriority();
-				} else {
-					interPriority = intTS.getPriority();
-				}
+				}// else {
+					//interPriority = intTS.getPriority();
+				//}
+				 * */
 				
 				if (interPriority > maxPriority) {
 					nextTS = intTS;
@@ -225,9 +230,11 @@ public class PriorityScheduler extends Scheduler {
 				// use an iterator
 				intTS = waitQueue.get(i);
 				if (transferPriority) {
-					System.out.println(intTS.getEffectivePriority());
+					//System.out.println(intTS.thread+": "+intTS.getEffectivePriority());
+					Lib.debug('t', intTS.thread+": "+intTS.getEffectivePriority());
 				} else {
-					System.out.println(intTS.getPriority());
+					//System.out.println(intTS.thread+": "+intTS.getPriority());
+					Lib.debug('t', intTS.thread+": "+intTS.getPriority());
 				}
 			}
 			return;	    
@@ -260,6 +267,7 @@ public class PriorityScheduler extends Scheduler {
 			this.thread = thread;
 			this.resourcePriorities = new Hashtable<PriorityQueue,Integer>();
 			setPriority(priorityDefault);
+			waitForAccessQueue = null;
 		}
 
 		/**
@@ -287,7 +295,13 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public void updateEffectivePriority(PriorityQueue waitQueue) {
 			// Update your hashtable with this effective priority
+			if (!waitQueue.transferPriority) {
+				return;
+			}
 			int maxPriority = waitQueue.getPQ();
+			Lib.debug('t', "Printing waitQueue");
+			waitQueue.print();
+			Lib.debug('t', "maxPriority: " + maxPriority);
 			this.resourcePriorities.put(waitQueue,maxPriority);
 
 			// Find the max priority of your resources after update
@@ -309,6 +323,7 @@ public class PriorityScheduler extends Scheduler {
 
 			// Change this thread state's maxEffectivePriority (max donation)
 			this.effectivePriority = maxP;
+			Lib.debug('t', "new priority for " + thread + ": " + effectivePriority);
 
 			// Now donate to the wait Queue that this thread state is waiting on.
 			if (this.waitForAccessQueue != null) {
@@ -322,17 +337,27 @@ public class PriorityScheduler extends Scheduler {
 		 * @param	priority	the new priority.
 		 */
 		public void setPriority(int priority) {
+			Lib.debug('t', "Setting priority from " + this.priority + " to " + priority);
 			if (this.priority == priority)
 				return;
+			
 			this.priority = priority;
+			
+			if (waitForAccessQueue == null) {
+				this.effectivePriority = priority;
+			} 
 			
 			//Now we need to update current thread state's priority
 			if(!this.resourcePriorities.isEmpty()) {
+				Lib.debug('t', "This thread has resourcePriorities");
 				PriorityQueue resourceQueue = this.resourcePriorities.keys().nextElement();
-				this.updateEffectivePriority(resourceQueue);
+				if (resourceQueue.transferPriority) {
+					this.updateEffectivePriority(resourceQueue);
+				}
 			}
 
 			if(this.waitForAccessQueue != null){
+				Lib.debug('t', "This thread is in a waitForAccessQueue");
 			    if(this.waitForAccessQueue.transferPriority){
 			        this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
 			    }
@@ -357,6 +382,9 @@ public class PriorityScheduler extends Scheduler {
 			
 			if (waitQueue.transferPriority){
 			    ThreadState rHolder = waitQueue.resourceHolder();
+			    Lib.debug('t', "rHolder: " + rHolder.thread);
+			    Lib.debug('t', "rHolder priority: " + rHolder.effectivePriority);
+			    Lib.debug('t', "my priority: " + effectivePriority);
 			    rHolder.updateEffectivePriority(waitQueue);
 			}
 		}
