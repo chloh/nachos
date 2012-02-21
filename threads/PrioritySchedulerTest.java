@@ -270,17 +270,17 @@ public class PrioritySchedulerTest extends AutoGrader{
            deal with any locks */
 		PriorityDonationWorker workerMi = 
 			new PriorityDonationWorker("M-Priority",
-					false,6,new NamedLock[0]);
+					false,2,new NamedLock[0]);
 		/* Create a Low-priority thread that runs forever and deals
            with all locks */
 		PriorityDonationWorker workerLo = 
 			new PriorityDonationWorker("L-Priority",
-					false,7,locks);
+					false,1,locks);
 		/* Create a Hi-priority thread that runs once and deals
            with all locks */
 		PriorityDonationWorker workerHi = 
 			new PriorityDonationWorker("H-Priority",
-					true,2,locks);
+					true,7,locks);
 
 		/* Create and name all threads */
 		KThread threadMi = new KThread(workerMi);
@@ -291,14 +291,17 @@ public class PrioritySchedulerTest extends AutoGrader{
 		threadHi.setName(workerHi.getName());;
 
 		/* Fork the Low-priority thread */
+		System.out.println("before low");
 		threadLo.fork();
 		ThreadedKernel.alarm.waitUntil(500);
 
 		/* Fork the Mid-priority thread */
+		System.out.println("before med");
 		threadMi.fork();
 		ThreadedKernel.alarm.waitUntil(500);
 
 		/* Fork the Hi-priority thread */
+		System.out.println("before hi");
 		threadHi.fork();
 
 		/* Waiting for the Hi-priority thread 

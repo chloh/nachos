@@ -201,11 +201,13 @@ public class PriorityScheduler extends Scheduler {
 			for (int i = 0; i < this.waitQueue.size(); i++) {
 				// should use iterator instead
 				intTS = waitQueue.get(i); //intermediate threadState pointer
+				
 				if (transferPriority) {
 					interPriority = intTS.getEffectivePriority();
 				} else {
 					interPriority = intTS.getPriority();
 				}
+				
 				if (interPriority > maxPriority) {
 					nextTS = intTS;
 					maxPriority = interPriority;
@@ -293,7 +295,7 @@ public class PriorityScheduler extends Scheduler {
 			//Integer[] allVals = (Integer[]) allValues.toArray();
 			int maxP = this.priority;
 			for(Integer thisP: allValues){
-				if(thisP > maxP){
+				if(thisP.intValue() > maxP){
 					maxP = thisP;
 				}
 			}
