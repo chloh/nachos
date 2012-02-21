@@ -256,7 +256,7 @@ public class PriorityScheduler extends Scheduler {
 		 */
 		public ThreadState(KThread thread) {
 			this.thread = thread;
-
+			this.resourcePriorities = new Hashtable<PriorityQueue,Integer>();
 			setPriority(priorityDefault);
 		}
 
