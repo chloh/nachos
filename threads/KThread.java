@@ -197,7 +197,9 @@ public class KThread {
 	
 	currentThread.joinLock.acquire();
 	currentThread.joinCV.wakeAll();
-	((ThreadState) currentThread.schedulingState).finish();
+	if (readyQueue instanceof PriorityScheduler.PriorityQueue) {
+		((ThreadState) currentThread.schedulingState).finish();
+	}
 	currentThread.joinLock.release();
 	
 	sleep();
@@ -286,7 +288,9 @@ public class KThread {
 	if(this.status == statusFinished){
 		return;
 	} else {
-		((ThreadState) this.schedulingState).join();
+		if (readyQueue instanceof PriorityScheduler.PriorityQueue) {
+			((ThreadState) this.schedulingState).join(this);
+		}
 		joinCV.sleep();
 	}
 	joinLock.release();

@@ -412,11 +412,16 @@ public class PriorityScheduler extends Scheduler {
 			}
 		}	
 		
-		public void join(){
+		public void join(KThread thread){
 			ThreadState currentTS = getThreadState(KThread.currentThread());
 	   		int newDonation = currentTS.getEffectivePriority();
-	   		PriorityQueue joinQueue = PriorityQueue(true);
+	   		((ThreadState) thread.schedulingState).joinQueue = new PriorityQueue(true);
+	   		boolean intStatus = Machine.interrupt().disable();
+	   		joinQueue.acquire(thread);
+	   		joinQueue.waitForAccess(KThread.currentThread());
+	   		Machine.interrupt().restore(intStatus);
 	    	this.resourcePriorities.put(joinQueue,newDonation);
+	    	
 	    	if (this.waitForAccessQueue != null) {
 	          if(this.waitForAccessQueue.transferPriority) {
 	           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
@@ -425,6 +430,9 @@ public class PriorityScheduler extends Scheduler {
 		}
 		
 		public void finish() {
+			if (this.joinQueue == null) {
+				return;
+			}
 		    this.resourcePriorities.remove(joinQueue);
 			Collection<Integer> allValues = this.resourcePriorities.values();
 			int maxP = this.priority;
