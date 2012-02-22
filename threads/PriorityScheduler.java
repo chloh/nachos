@@ -426,7 +426,7 @@ public class PriorityScheduler extends Scheduler {
 	    	
 	    	if (this.waitForAccessQueue != null) {
 	          if(this.waitForAccessQueue.transferPriority) {
-	           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
 	          }
 	    	}
 		}
