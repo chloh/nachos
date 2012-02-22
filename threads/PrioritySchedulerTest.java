@@ -605,7 +605,7 @@ public class PrioritySchedulerTest extends AutoGrader{
 	private static void runPriorityDonationJoinTest1() {
 
 		System.out.println("#### Priority Donation join test ####");
-		System.out.println("    This test is to check that priority donation" +
+		System.out.println("    This test is to check that priority donation " +
 				"occurs with join");
 
 		/* Create an array with only lock lock */

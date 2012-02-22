@@ -413,12 +413,51 @@ public class PriorityScheduler extends Scheduler {
 			    this.updateEffectivePriority(waitQueue);
 			}
 		}	
+		
+		public void join(KThread thread){
+			ThreadState currentTS = getThreadState(KThread.currentThread());
+	   		int newDonation = currentTS.getEffectivePriority();
+	   		((ThreadState) thread.schedulingState).joinQueue = new PriorityQueue(true);
+	   		boolean intStatus = Machine.interrupt().disable();
+	   		joinQueue.acquire(thread);
+	   		joinQueue.waitForAccess(KThread.currentThread());
+	   		Machine.interrupt().restore(intStatus);
+	    	this.resourcePriorities.put(joinQueue,newDonation);
+	    	
+	    	if (this.waitForAccessQueue != null) {
+	          if(this.waitForAccessQueue.transferPriority) {
+	           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+	          }
+	    	}
+		}
+		
+		public void finish() {
+			if (this.joinQueue == null) {
+				return;
+			}
+		    this.resourcePriorities.remove(joinQueue);
+			Collection<Integer> allValues = this.resourcePriorities.values();
+			int maxP = this.priority;
+			for(Integer thisP: allValues){
+				if(thisP.intValue() > maxP){
+					maxP = thisP;
+				}
+			}
+			this.effectivePriority = maxP;
+			Lib.debug('t', "new priority for " + thread + ": " + effectivePriority);
+			if (this.waitForAccessQueue != null) {
+				if (waitForAccessQueue.resourceHolder() != null) {
+					waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+				}
+			}
+		}
 
 		/** The thread with which this object is associated. */	   
 		protected KThread thread;
 		/** The priority of the associated thread. */
 		protected int priority;
 		protected int effectivePriority;
+		protected PriorityQueue joinQueue;
 		protected Hashtable<PriorityQueue, Integer> resourcePriorities;
 		protected PriorityQueue waitForAccessQueue;
 	}
