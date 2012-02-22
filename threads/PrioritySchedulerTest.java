@@ -817,18 +817,22 @@ public class PrioritySchedulerTest extends AutoGrader{
 		// This thread won't have to do anything
 		JoinThread workerE = new JoinThread(null,"E",0, lock);
 		KThread E = new KThread(workerE);
+		E.setName("E");
 		
 		// D calls E.join()
 		JoinThread workerD = new JoinThread(E,"D",1);
 		KThread D = new KThread(workerD);
+		D.setName("D");
 		
 		// C calls D.join()
 		JoinThread workerC = new JoinThread(D,"C",2);
 		KThread C = new KThread(workerC);
+		C.setName("C");
 		
 		// B calls C.join()
 		JoinThread workerB = new JoinThread(C,"B",3);
 		KThread B = new KThread(workerB);	
+		B.setName("B");
 		
 		JoinThread workerF = new JoinThread(null,"F",3,lock);
 		KThread F = new KThread(workerF);
@@ -836,6 +840,7 @@ public class PrioritySchedulerTest extends AutoGrader{
 		// A calls B.join()
 		JoinThread workerA = new JoinThread(B,"A",7,lock);
 		KThread A = new KThread(workerA);
+		A.setName("A");
 		
 		E.fork();
 		ThreadedKernel.alarm.waitUntil(1000);
@@ -859,6 +864,62 @@ public class PrioritySchedulerTest extends AutoGrader{
 
 	}
 	
+	private static void runPriorityDonationJoinTest4() {
+
+		System.out.println("#### Priority Donation join test4 ####");
+		System.out.println("    This test is to check that priority donation " +
+				"occurs with join");
+		
+		NamedLock lock = new NamedLock("Lock0");
+		
+		// This thread won't have to do anything
+		JoinThread workerF = new JoinThread(null,"F",5, lock);
+		KThread F = new KThread(workerF);
+		F.setName("F");
+		
+		// This thread won't have to do anything
+		JoinThread workerE = new JoinThread(null,"E",0, lock);
+		KThread E = new KThread(workerE);
+		E.setName("E");
+		
+		// D calls E.join()
+		JoinThread workerD = new JoinThread(E,"D",4);
+		KThread D = new KThread(workerD);
+		D.setName("D");
+		
+		// C calls D.join()
+		JoinThread workerC = new JoinThread(D,"C",5);
+		KThread C = new KThread(workerC);
+		C.setName("C");
+		
+		// B calls C.join()
+		JoinThread workerB = new JoinThread(C,"B",6);
+		KThread B = new KThread(workerB);	
+		B.setName("B");
+		
+		// A calls B.join()
+		JoinThread workerA = new JoinThread(B,"A",7);
+		KThread A = new KThread(workerA);
+		A.setName("A");
+		
+		F.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+		
+		A.fork();
+		B.fork();
+		C.fork();
+		D.fork();
+		E.fork();
+		
+		A.join();
+		System.out.println("Resetting boolean");
+		//surrender the lock only after everyone's been forked
+		workerE.done = true;
+		
+
+		System.out.println("#### Priority Donation join test ends ####\n");
+
+	}
 
 
 	/**
@@ -885,7 +946,9 @@ public class PrioritySchedulerTest extends AutoGrader{
 		//runPriorityDonationJoinTest1();
 		
 		/*  Join test2 */
-		runPriorityDonationJoinTest3();
+		//runPriorityDonationJoinTest3();
+		
+		runPriorityDonationJoinTest4();
 
 		
 		System.out.println("####################################");

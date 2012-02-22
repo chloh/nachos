@@ -182,12 +182,12 @@ public class PriorityScheduler extends Scheduler {
 			int maxEffectivePriority = -1;
 			ThreadState thisTS;
 			if (transferPriority) {
-			    for (int i = 0; i < this.waitQueue.size(); i++) {
+				for (int i = 0; i < this.waitQueue.size(); i++) {
 					thisTS = waitQueue.get(i);
 					if (thisTS.getEffectivePriority() > maxEffectivePriority){
 						maxEffectivePriority = thisTS.getEffectivePriority();
 					}
-			    }
+				}
 			}
 			return maxEffectivePriority;
 		}
@@ -229,6 +229,8 @@ public class PriorityScheduler extends Scheduler {
 			}
 			return nextTS;
 		}
+
+		/** PRINT THAT SHIT **/
 
 		public void print() {
 			Lib.assertTrue(Machine.interrupt().disabled());
@@ -424,7 +426,7 @@ public class PriorityScheduler extends Scheduler {
 	    	
 	    	if (this.waitForAccessQueue != null) {
 	          if(this.waitForAccessQueue.transferPriority) {
-	           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
 	          }
 	    	}
 		}
@@ -455,8 +457,8 @@ public class PriorityScheduler extends Scheduler {
 		/** The priority of the associated thread. */
 		protected int priority;
 		protected int effectivePriority;
+		protected PriorityQueue joinQueue;
 		protected Hashtable<PriorityQueue, Integer> resourcePriorities;
 		protected PriorityQueue waitForAccessQueue;
-		protected PriorityQueue joinQueue;
 	}
 }
