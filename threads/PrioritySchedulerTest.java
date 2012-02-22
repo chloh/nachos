@@ -830,6 +830,7 @@ public class PrioritySchedulerTest extends AutoGrader{
 		ThreadedKernel.alarm.waitUntil(1000);
 		A.fork();
 		System.out.println("Resetting boolean");
+		//surrender the lock only after everyone's been forked
 		workerE.done = true;
 		
 
