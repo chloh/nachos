@@ -456,7 +456,7 @@ public class PrioritySchedulerTest extends AutoGrader{
 		@Override
 		public void run() {
 			
-			if(joinedThread == null){
+			if(lock != null){
 				System.out.println("Acquiring lock");
 				lock.acquire();
 				while(!done){
@@ -817,7 +817,7 @@ public class PrioritySchedulerTest extends AutoGrader{
 		KThread B = new KThread(workerB);	
 		
 		// A calls B.join()
-		JoinThread workerA = new JoinThread(B,"A",7);
+		JoinThread workerA = new JoinThread(B,"A",7,lock);
 		KThread A = new KThread(workerA);
 		
 		E.fork();
