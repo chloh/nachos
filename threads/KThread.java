@@ -196,6 +196,7 @@ public class KThread {
 	
 	currentThread.joinLock.acquire();
 	currentThread.joinCV.wakeAll();
+	this.((ThreadState) schedulingState).finish();
 	currentThread.joinLock.release();
 	
 	sleep();
@@ -284,6 +285,7 @@ public class KThread {
 	if(this.status == statusFinished){
 		return;
 	} else {
+		this.((ThreadState) schedulingState).join();
 		joinCV.sleep();
 	}
 	joinLock.release();
