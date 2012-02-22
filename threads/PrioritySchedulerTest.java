@@ -431,6 +431,49 @@ public class PrioritySchedulerTest extends AutoGrader{
 		}
 		return someLocks;
 	}
+	
+	private static class JoinThread implements Runnable {
+
+		public KThread joinedThread;
+		public String name;
+		public int priority;
+		public NamedLock lock;
+		public boolean done = false;
+		
+		public JoinThread(KThread joinedThread, String name, int priority){
+			this.joinedThread = joinedThread;
+			this.name = name;
+			this.priority = priority;
+		}
+		
+		public JoinThread(KThread joinedThread, String name, int priority, NamedLock lock){
+			this.joinedThread = joinedThread;
+			this.name = name;
+			this.priority = priority;
+			this.lock = lock;
+		}
+		
+		@Override
+		public void run() {
+			
+			if(lock != null){
+				System.out.println("Acquiring lock");
+				lock.acquire();
+				while(!done){
+					System.out.println(this.name + " has the lock");
+					KThread.yield();
+				}
+				System.out.println("Releasing the lock");
+				lock.release();
+			} else {
+				System.out.println(this.name + " joining thread: " + joinedThread);
+				joinedThread.join();
+				System.out.println("Finished: " + this.name);
+			}
+		}
+		
+		
+	}
 
 	/* runPriorityDonationTest3(): A complex random test with many high-priority
 	 *    threads that all care about different locks. 
@@ -616,7 +659,7 @@ public class PrioritySchedulerTest extends AutoGrader{
            deal with any locks */
 		PriorityDonationWorker workerMi = 
 			new PriorityDonationWorker("M-Priority",
-					false,1,new NamedLock[0]);
+					false,7,new NamedLock[0]);
 		/* Create a Low-priority thread that runs forever and deals
            with all locks */
 		PriorityDonationWorkerITimes workerLo = 
@@ -667,6 +710,134 @@ public class PrioritySchedulerTest extends AutoGrader{
 
 	}
 	
+	private static void runPriorityDonationJoinTest2() {
+
+		System.out.println("#### Priority Donation join test2 ####");
+		System.out.println("    This test is to check that priority donation " +
+				"occurs with join");
+
+		/* Create an array with only lock lock */
+		NamedLock[] locks = new NamedLock[1];
+		locks[0] = new NamedLock("lock0");
+
+		/* Create a Mid-priority thread that runs forever and doesn't
+           deal with any locks */
+		PriorityDonationWorker workerMi = 
+			new PriorityDonationWorker("M-Priority",
+					false,1,new NamedLock[0]);
+		
+		/*
+		 * Create another low-priority thread similar to below
+		 */
+		PriorityDonationWorkerITimes workerLo2 = 
+				new PriorityDonationWorkerITimes("L-Priority2",
+						5,0);
+	
+		/* Create a Low-priority thread that runs forever and deals
+           with all locks */
+		PriorityDonationWorkerITimes workerLo = 
+			new PriorityDonationWorkerITimes("L-Priority",
+					5,0);
+		
+		/* Create and name all threads */
+		KThread threadMi = new KThread(workerMi);
+		threadMi.setName(workerMi.getName());
+		KThread threadLo = new KThread(workerLo);
+		KThread threadLo2 = new KThread(workerLo);
+		threadLo.setName(workerLo.getName());
+		
+		/* Create a Hi-priority thread that runs once and deals
+           with all locks */
+		PriorityDonationJoinWorker workerHi = 
+			new PriorityDonationJoinWorker("H-Priority",
+					7, threadLo);
+		
+		KThread threadHi = new KThread(workerHi);
+		threadHi.setName(workerHi.getName());;
+
+		/* Fork the Low-priority thread */
+		System.out.println("before low");
+		threadLo.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+		
+		/* Fork the second Low-priority thread */
+		System.out.println("before low2");
+		threadLo2.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+
+		/* Fork the Mid-priority thread */
+		System.out.println("before med");
+		threadMi.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+
+		/* Fork the Hi-priority thread */
+		System.out.println("before hi");
+		threadHi.fork();
+
+		/* Waiting for the Hi-priority thread 
+		 * If priority Donation is not implemented (correctly),
+           this will deadlock as the Lo worker never gets to run */
+		threadHi.join();
+
+		//threadLo2.join();
+		
+		/* Wait thread termination */
+		workerMi.terminate();
+		threadMi.join();
+
+		//threadLo.join();
+
+		System.out.println("#### Priority Donation join test ends ####\n");
+
+	}
+	
+	private static void runPriorityDonationJoinTest3() {
+
+		System.out.println("#### Priority Donation join test3 ####");
+		System.out.println("    This test is to check that priority donation " +
+				"occurs with join");
+		
+
+		NamedLock lock = new NamedLock("Lock0");
+		
+		// This thread won't have to do anything
+		JoinThread workerE = new JoinThread(null,"E",0, lock);
+		KThread E = new KThread(workerE);
+		
+		// D calls E.join()
+		JoinThread workerD = new JoinThread(E,"D",4);
+		KThread D = new KThread(workerD);
+		
+		// C calls D.join()
+		JoinThread workerC = new JoinThread(D,"C",5);
+		KThread C = new KThread(workerC);
+		
+		// B calls C.join()
+		JoinThread workerB = new JoinThread(C,"B",6);
+		KThread B = new KThread(workerB);	
+		
+		// A calls B.join()
+		JoinThread workerA = new JoinThread(B,"A",7,lock);
+		KThread A = new KThread(workerA);
+		
+		E.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		D.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		C.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		B.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		A.fork();
+		System.out.println("Resetting boolean");
+		//surrender the lock only after everyone's been forked
+		workerE.done = true;
+		
+
+		System.out.println("#### Priority Donation join test ends ####\n");
+
+	}
+	
 
 
 	/**
@@ -690,8 +861,12 @@ public class PrioritySchedulerTest extends AutoGrader{
 		//runPriorityDonationTest3();
 		
 		/*  Join test */
-		runPriorityDonationJoinTest1();
+		//runPriorityDonationJoinTest1();
+		
+		/*  Join test2 */
+		runPriorityDonationJoinTest3();
 
+		
 		System.out.println("####################################");
 		System.out.println("## PriorityScheduler testing ends ##");
 		System.out.println("####################################\n");
