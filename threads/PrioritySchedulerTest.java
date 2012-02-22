@@ -456,6 +456,10 @@ public class PrioritySchedulerTest extends AutoGrader{
 		@Override
 		public void run() {
 			
+			if(joinedThread != null){
+				Lib.debug('t',this.name + " joining thread: " + joinedThread);
+				joinedThread.join();
+			}
 			if(lock != null){
 				System.out.println("Acquiring lock");
 				lock.acquire();
@@ -465,11 +469,8 @@ public class PrioritySchedulerTest extends AutoGrader{
 				}
 				System.out.println("Releasing the lock");
 				lock.release();
-			} else {
-				System.out.println(this.name + " joining thread: " + joinedThread);
-				joinedThread.join();
-				System.out.println("Finished: " + this.name);
-			}
+			} 
+			Lib.debug('t',"Finished: " + this.name);
 		}
 		
 		
@@ -820,15 +821,15 @@ public class PrioritySchedulerTest extends AutoGrader{
 		JoinThread workerA = new JoinThread(B,"A",7,lock);
 		KThread A = new KThread(workerA);
 		
-		E.fork();
-		ThreadedKernel.alarm.waitUntil(1000);
-		D.fork();
-		ThreadedKernel.alarm.waitUntil(1000);
-		C.fork();
+		A.fork();
 		ThreadedKernel.alarm.waitUntil(1000);
 		B.fork();
 		ThreadedKernel.alarm.waitUntil(1000);
-		A.fork();
+		C.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		D.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		E.fork();
 		System.out.println("Resetting boolean");
 		//surrender the lock only after everyone's been forked
 		workerE.done = true;
