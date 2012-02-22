@@ -465,7 +465,7 @@ public class PrioritySchedulerTest extends AutoGrader{
 		public void run() {
 			
 			KThread.currentThread().setPriority(this.priority);
-			if(this.name == "X"){
+			if(this.name == RANDOM_THREAD){
 				return;
 			}
 			if(joinedThread != null){
@@ -830,12 +830,8 @@ public class PrioritySchedulerTest extends AutoGrader{
 		JoinThread workerB = new JoinThread(C,"B",3);
 		KThread B = new KThread(workerB);	
 		
-		for(int i = 0; i < 500; i++){
-			  JoinThread workerF = new JoinThread(null,"X",7,null);
-			  KThread F = new KThread(workerF);
-			  F.fork();
-			  ThreadedKernel.alarm.waitUntil(500);
-		}
+		JoinThread workerF = new JoinThread(null,"F",3,lock);
+		KThread F = new KThread(workerF);
 		
 		// A calls B.join()
 		JoinThread workerA = new JoinThread(B,"A",7,lock);
@@ -850,9 +846,13 @@ public class PrioritySchedulerTest extends AutoGrader{
 		B.fork();
 		ThreadedKernel.alarm.waitUntil(1000);
 		A.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+		F.fork();
+		workerF.done = true;
 		//surrender the lock only after everyone's been forked
 		workerE.done = true;
 		workerA.done = true;
+		
 		
 
 		Lib.debug('t',"#### Priority Donation join test ends ####\n");
@@ -892,4 +892,5 @@ public class PrioritySchedulerTest extends AutoGrader{
 		System.out.println("## PriorityScheduler testing ends ##");
 		System.out.println("####################################\n");
 	}
+	private static final String RANDOM_THREAD = "_R_";
 }
