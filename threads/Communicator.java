@@ -43,16 +43,7 @@ public class Communicator {
     		CVBoth.wake();
     		CVBoth.sleep();
     	}
-    	/* removed this because waiting for the other thread to 
-    	 * completely finish is wrong
-    	if (currentListener != null) {
-	    	currentListener.join();
-    	}
-    	*/
-    	//currentSpeaker = null;
     	
-    	// I don't think we need this line of code
-    	//CVSpeak.wake();
     	lock.release();
     	return;
     }
