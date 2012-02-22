@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import nachos.threads.PriorityScheduler.ThreadState;
 
 /**
  * A KThread is a thread that can be used to execute Nachos kernel code. Nachos
@@ -196,7 +197,7 @@ public class KThread {
 	
 	currentThread.joinLock.acquire();
 	currentThread.joinCV.wakeAll();
-	this.((ThreadState) schedulingState).finish();
+	((ThreadState) currentThread.schedulingState).finish();
 	currentThread.joinLock.release();
 	
 	sleep();
@@ -285,7 +286,7 @@ public class KThread {
 	if(this.status == statusFinished){
 		return;
 	} else {
-		this.((ThreadState) schedulingState).join();
+		((ThreadState) this.schedulingState).join();
 		joinCV.sleep();
 	}
 	joinLock.release();

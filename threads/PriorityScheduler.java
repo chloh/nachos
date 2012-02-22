@@ -415,8 +415,8 @@ public class PriorityScheduler extends Scheduler {
 		public void join(){
 			ThreadState currentTS = getThreadState(KThread.currentThread());
 	   		int newDonation = currentTS.getEffectivePriority();
-	   		joinQueue = newThreadQueue(true);
-	    	this.resourcePrioritites.add(joinQueue,newDonation);
+	   		PriorityQueue joinQueue = PriorityQueue(true);
+	    	this.resourcePriorities.put(joinQueue,newDonation);
 	    	if (this.waitForAccessQueue != null) {
 	          if(this.waitForAccessQueue.transferPriority) {
 	           	    this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
