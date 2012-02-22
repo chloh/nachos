@@ -232,6 +232,9 @@ public class Boat
 				if(numChildrenOnBoat == 0) { // no children on boat
 
 					if(numChildrenOnOahu >= 2) {
+						// in case they are sleeping
+						waitOnOahu.wakeAll();
+						
 						numChildrenOnBoat++;
 						numChildrenOnOahu--;
 						bg.ChildRowToMolokai();
@@ -249,7 +252,6 @@ public class Boat
 						waitOnMolokai.wakeAll();
 					} else {
 						waitOnOahu.sleep();
-						//KThread.yield();
 						continue;
 					}
 				} else { // if one child on boat

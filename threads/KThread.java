@@ -433,7 +433,7 @@ public class KThread {
 	//CommunicatorTest.runTest();
 	
 	//Tests 5
-	//PrioritySchedulerTest.runTest();
+	PrioritySchedulerTest.runTest();
 	
 	//Tests boat module
 	BoatTest.runTest();

@@ -156,6 +156,8 @@ public class PriorityScheduler extends Scheduler {
 					if (resourceQueue.transferPriority) {
 						this.resourceHolder().updateEffectivePriority(resourceQueue);
 					}
+				} else {
+					this.resourceHolder().effectivePriority = this.resourceHolder().priority;
 				}
 			}
 			
