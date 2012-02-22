@@ -439,11 +439,19 @@ public class PrioritySchedulerTest extends AutoGrader{
 		public int priority;
 		public NamedLock lock;
 		public boolean done = false;
+		public boolean runOnce = false;
 		
 		public JoinThread(KThread joinedThread, String name, int priority){
 			this.joinedThread = joinedThread;
 			this.name = name;
 			this.priority = priority;
+		}
+		
+		public JoinThread(KThread joinedThread, String name, int priority, boolean runOnce){
+			this.joinedThread = joinedThread;
+			this.name = name;
+			this.priority = priority;
+			this.runOnce = runOnce;
 		}
 		
 		public JoinThread(KThread joinedThread, String name, int priority, NamedLock lock){
@@ -456,18 +464,21 @@ public class PrioritySchedulerTest extends AutoGrader{
 		@Override
 		public void run() {
 			
+			KThread.currentThread().setPriority(this.priority);
+			if(this.name == "X"){
+				return;
+			}
 			if(joinedThread != null){
 				Lib.debug('t',this.name + " joining thread: " + joinedThread);
 				joinedThread.join();
 			}
 			if(lock != null){
-				System.out.println("Acquiring lock");
+				System.out.println(this.name + " is acquiring lock");
 				lock.acquire();
 				while(!done){
-					System.out.println(this.name + " has the lock");
 					KThread.yield();
 				}
-				System.out.println("Releasing the lock");
+				System.out.println(this.name + " is releasing the lock");
 				lock.release();
 			} 
 			Lib.debug('t',"Finished: " + this.name);
@@ -801,41 +812,50 @@ public class PrioritySchedulerTest extends AutoGrader{
 
 		NamedLock lock = new NamedLock("Lock0");
 		
+
+		
 		// This thread won't have to do anything
 		JoinThread workerE = new JoinThread(null,"E",0, lock);
 		KThread E = new KThread(workerE);
 		
 		// D calls E.join()
-		JoinThread workerD = new JoinThread(E,"D",4);
+		JoinThread workerD = new JoinThread(E,"D",1);
 		KThread D = new KThread(workerD);
 		
 		// C calls D.join()
-		JoinThread workerC = new JoinThread(D,"C",5);
+		JoinThread workerC = new JoinThread(D,"C",2);
 		KThread C = new KThread(workerC);
 		
 		// B calls C.join()
-		JoinThread workerB = new JoinThread(C,"B",6);
+		JoinThread workerB = new JoinThread(C,"B",3);
 		KThread B = new KThread(workerB);	
+		
+		for(int i = 0; i < 500; i++){
+			  JoinThread workerF = new JoinThread(null,"X",7,null);
+			  KThread F = new KThread(workerF);
+			  F.fork();
+			  ThreadedKernel.alarm.waitUntil(500);
+		}
 		
 		// A calls B.join()
 		JoinThread workerA = new JoinThread(B,"A",7,lock);
 		KThread A = new KThread(workerA);
 		
-		A.fork();
-		ThreadedKernel.alarm.waitUntil(1000);
-		B.fork();
-		ThreadedKernel.alarm.waitUntil(1000);
-		C.fork();
+		E.fork();
 		ThreadedKernel.alarm.waitUntil(1000);
 		D.fork();
 		ThreadedKernel.alarm.waitUntil(1000);
-		E.fork();
-		System.out.println("Resetting boolean");
+		C.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		B.fork();
+		ThreadedKernel.alarm.waitUntil(1000);
+		A.fork();
 		//surrender the lock only after everyone's been forked
 		workerE.done = true;
+		workerA.done = true;
 		
 
-		System.out.println("#### Priority Donation join test ends ####\n");
+		Lib.debug('t',"#### Priority Donation join test ends ####\n");
 
 	}
 	
