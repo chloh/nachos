@@ -518,6 +518,156 @@ public class PrioritySchedulerTest extends AutoGrader{
 
 		System.out.println("#### Priority Donation test #3 ends ####\n");
 	}
+	
+	/**
+	 * This thread only runs once and calls join on the threadToJoin
+	 * @author david
+	 *
+	 */
+	private static class PriorityDonationJoinWorker implements Runnable {
+
+		/* Constructor */
+		PriorityDonationJoinWorker(String name, 
+				int priority, KThread threadToJoin) {
+			this.name = name;
+			this.priority = priority;
+			this.threadToJoin = threadToJoin;
+		}
+
+		/** getName()
+		 */
+		public String getName() {
+			return this.name;
+		}
+
+		/** run() method 
+		 */
+		public void run() {
+
+			System.out.println("** "+name+" begins");
+
+			/* Setting the prescribed priority */
+			KThread.currentThread().setPriority(this.priority); 
+
+			Lib.debug('t', KThread.currentThread()+" joining on " + this.threadToJoin);
+			this.threadToJoin.join();
+
+			System.out.println("** "+name+" exits");
+		}
+
+		private String name;		// Name of the worker             
+		private int priority;		// Prescribed priority
+		private KThread threadToJoin;
+	}
+	
+	
+	private static class PriorityDonationWorkerITimes implements Runnable {
+
+		/* Constructor */
+		PriorityDonationWorkerITimes(String name, int timesToRun,
+				int priority) {
+			this.name = name;
+			this.priority = priority;
+			this.timesToRun = timesToRun;
+		}
+
+		/** getName()
+		 */
+		public String getName() {
+			return this.name;
+		}
+
+		/** run() method 
+		 */
+		public void run() {
+
+			System.out.println("** "+name+" begins");
+
+			/* Setting the prescribed priority */
+			KThread.currentThread().setPriority(this.priority); 
+
+			for (int i = 0; i < timesToRun; i++) {
+				/* "Sleep" for a while */
+				long wakeTime = Machine.timer().getTime() + 2000;
+				while (wakeTime > Machine.timer().getTime()) { 
+					KThread.yield();
+				}
+			}
+
+			System.out.println("** "+name+" exits");
+		}
+
+		private String name;		// Name of the worker             
+		private int priority;		// Prescribed priority
+		private int timesToRun;
+	}
+	
+	private static void runPriorityDonationJoinTest1() {
+
+		System.out.println("#### Priority Donation join test ####");
+		System.out.println("    This test is to check that priority donation" +
+				"occurs with join");
+
+		/* Create an array with only lock lock */
+		NamedLock[] locks = new NamedLock[1];
+		locks[0] = new NamedLock("lock0");
+
+		/* Create a Mid-priority thread that runs forever and doesn't
+           deal with any locks */
+		PriorityDonationWorker workerMi = 
+			new PriorityDonationWorker("M-Priority",
+					false,1,new NamedLock[0]);
+		/* Create a Low-priority thread that runs forever and deals
+           with all locks */
+		PriorityDonationWorkerITimes workerLo = 
+			new PriorityDonationWorkerITimes("L-Priority",
+					5,0);
+
+		/* Create and name all threads */
+		KThread threadMi = new KThread(workerMi);
+		threadMi.setName(workerMi.getName());
+		KThread threadLo = new KThread(workerLo);
+		threadLo.setName(workerLo.getName());
+		
+		/* Create a Hi-priority thread that runs once and deals
+           with all locks */
+		PriorityDonationJoinWorker workerHi = 
+			new PriorityDonationJoinWorker("H-Priority",
+					7, threadLo);
+		
+		KThread threadHi = new KThread(workerHi);
+		threadHi.setName(workerHi.getName());;
+
+		/* Fork the Low-priority thread */
+		System.out.println("before low");
+		threadLo.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+
+		/* Fork the Mid-priority thread */
+		System.out.println("before med");
+		threadMi.fork();
+		ThreadedKernel.alarm.waitUntil(500);
+
+		/* Fork the Hi-priority thread */
+		System.out.println("before hi");
+		threadHi.fork();
+
+		/* Waiting for the Hi-priority thread 
+		 * If priority Donation is not implemented (correctly),
+           this will deadlock as the Lo worker never gets to run */
+		threadHi.join();
+
+		/* Wait thread termination */
+		workerMi.terminate();
+		threadMi.join();
+
+		//threadLo.join();
+
+		System.out.println("#### Priority Donation join test ends ####\n");
+
+	}
+	
+
 
 	/**
 	 * Tests whether this module is working.
@@ -528,16 +678,19 @@ public class PrioritySchedulerTest extends AutoGrader{
 		System.out.println("######################################\n");
 
 		/* A simple ping-pong test */
-		runPingPongTest();
+		//runPingPongTest();
 
 		/* Simplest priority donation test */
-		runPriorityDonationTest1();
+		//runPriorityDonationTest1();
 
 		/*  More sophisticated donation test */
-		runPriorityDonationTest2();
+		//runPriorityDonationTest2();
 
 		/*  Complex donation test */
-		runPriorityDonationTest3();
+		//runPriorityDonationTest3();
+		
+		/*  Join test */
+		runPriorityDonationJoinTest1();
 
 		System.out.println("####################################");
 		System.out.println("## PriorityScheduler testing ends ##");

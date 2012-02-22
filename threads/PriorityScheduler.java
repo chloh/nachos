@@ -182,12 +182,12 @@ public class PriorityScheduler extends Scheduler {
 			int maxEffectivePriority = -1;
 			ThreadState thisTS;
 			if (transferPriority) {
-			    for (int i = 0; i < this.waitQueue.size(); i++) {
-				thisTS = waitQueue.get(i);
-				if (thisTS.getEffectivePriority() > maxEffectivePriority){
-					maxEffectivePriority = thisTS.getEffectivePriority();
+				for (int i = 0; i < this.waitQueue.size(); i++) {
+					thisTS = waitQueue.get(i);
+					if (thisTS.getEffectivePriority() > maxEffectivePriority){
+						maxEffectivePriority = thisTS.getEffectivePriority();
+					}
 				}
-			    }
 			}
 			return maxEffectivePriority;
 		}
@@ -325,13 +325,6 @@ public class PriorityScheduler extends Scheduler {
 					maxP = thisP;
 				}
 			}
-			//int thisP;
-			/*for (int i = 0; i < resourcePriorities.size(); i++) {
-				thisP = allVals[i].intValue();
-				if (thisP > maxP) {
-					maxP = thisP;
-				}
-			}*/
 
 			// Change this thread state's maxEffectivePriority (max donation)
 			this.effectivePriority = maxP;
