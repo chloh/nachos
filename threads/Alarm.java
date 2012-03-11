@@ -21,12 +21,15 @@ public class Alarm {
 		Machine.timer().setInterruptHandler(new Runnable() {
 			public void run() { timerInterrupt(); }
 		});
-		lock = new Lock();
-		this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>(){
-			public int compare(KThread t0, KThread t1){
-				if(t0.time < t1.time) return 1;
-				if(t0.time > t1.time) return -1;
-				else return 0;
+		this.waitQueue = new PriorityQueue<KThread>(10, new Comparator<KThread>() {
+			public int compare(KThread t0, KThread t1) {
+				if(t0.time < t1.time) {
+					return -1;
+				} else if (t0.time > t1.time) {
+					return 1;
+				} else {
+					return 0;
+				}
 			}
 		}
 		);
@@ -42,19 +45,21 @@ public class Alarm {
 	public void timerInterrupt() {
 		long currentTime = Machine.timer().getTime();
 		long wakeTime;
-		lock.acquire();
-		while(!waitQueue.isEmpty()){
-			KThread thread = waitQueue.poll();
+		KThread thread;
+		
+		boolean intStatus = Machine.interrupt().disable();
+		while(!waitQueue.isEmpty()) {
+			thread = waitQueue.poll();
 			wakeTime = thread.time;
-			if(wakeTime <= currentTime) thread.ready();
-			else {
+			if(wakeTime <= currentTime) {
+				thread.ready();
+			} else {
 				waitQueue.offer(thread);
 				break;
 			}
-
 		}
-		lock.release();
-
+		Machine.interrupt().restore(intStatus);
+		
 	}
 
 	/**
@@ -72,17 +77,16 @@ public class Alarm {
 	 * @see	nachos.machine.Timer#getTime()
 	 */
 	public void waitUntil(long x) {
-		// for now, cheat just to get something working (busy waiting is bad)
 		long wakeTime = Machine.timer().getTime() + x;
 		KThread currentThread = KThread.currentThread();
-		lock.acquire();
+		
+		boolean intStatus = Machine.interrupt().disable();
 		currentThread.time = wakeTime;
 		waitQueue.add(currentThread);
-		lock.release();
 		
-		KThread.yield();
+		KThread.sleep();
+		Machine.interrupt().restore(intStatus);
 
 	}
-	private Lock lock;
 	private PriorityQueue<KThread> waitQueue;
 }

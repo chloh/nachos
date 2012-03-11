@@ -32,14 +32,18 @@ public class Communicator {
      */
     public void speak(int word) {
     	lock.acquire();
-    	while(currentSpeaker != null) CVSpeak.sleep();
+    	while(currentSpeaker != null) {
+    		CVSpeak.sleep();
+    	}
     	msg = word;
     	currentSpeaker = KThread.currentThread();
-    	if(currentListener == null) CVBoth.sleep();
-    	else CVBoth.wake();
-    	currentListener.join();
-    	currentSpeaker = null;
-    	CVSpeak.wake();
+    	if(currentListener == null) {
+    		CVBoth.sleep();
+    	} else {
+    		CVBoth.wake();
+    		CVBoth.sleep();
+    	}
+    	
     	lock.release();
     	return;
     }
@@ -52,13 +56,22 @@ public class Communicator {
      */    
     public int listen() {
     	lock.acquire();
-    	while(currentListener != null) CVListen.sleep();
+    	while(currentListener != null) {
+    		CVListen.sleep();
+    	}
     	currentListener = KThread.currentThread();
-    	if(currentSpeaker == null) CVBoth.sleep();
-    	else CVBoth.wake();
+    	if(currentSpeaker == null) {
+    		CVBoth.sleep();
+    		CVBoth.wake();
+    	} else {
+    		CVBoth.wake();
+    	}
     	int out = msg;
     	currentListener = null;
+    	currentSpeaker = null;
+    	
     	CVListen.wake();
+    	CVSpeak.wake();
     	lock.release();
     	return out;
     }

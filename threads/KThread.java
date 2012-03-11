@@ -1,6 +1,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import nachos.threads.PriorityScheduler.ThreadState;
 
 /**
  * A KThread is a thread that can be used to execute Nachos kernel code. Nachos
@@ -196,6 +197,9 @@ public class KThread {
 	
 	currentThread.joinLock.acquire();
 	currentThread.joinCV.wakeAll();
+	if (readyQueue instanceof PriorityScheduler.PriorityQueue) {
+		((ThreadState) currentThread.schedulingState).finish();
+	}
 	currentThread.joinLock.release();
 	
 	sleep();
@@ -284,6 +288,9 @@ public class KThread {
 	if(this.status == statusFinished){
 		return;
 	} else {
+		if (readyQueue instanceof PriorityScheduler.PriorityQueue) {
+			((ThreadState) this.schedulingState).join(this);
+		}
 		joinCV.sleep();
 	}
 	joinLock.release();
@@ -424,14 +431,47 @@ public class KThread {
 	//Condition2Test.runTest();
 
 	//Uncomment below to test Alarm module
-	AlarmTest.runTest();
+	//AlarmTest.runTest();
+	
+	//don't use this test.  there are some problems with it
+	//AlarmTest2.runTest();
 
 	//Tests Communicator module
 	//CommunicatorTest.runTest();
-
-	//AlarmTest.runTest();
+	
+	//Tests 5
+	PrioritySchedulerTest.runTest();
+	
+	//Tests boat module
+	//BoatTest.runTest();
     }
 
+    public void setPriority(int priority) {
+        /* Disable interrupts */
+        boolean intStatus = Machine.interrupt().disable();
+
+        /* Talk to the scheduler */
+        ThreadedKernel.scheduler.setPriority(this, priority);
+
+        /* Restore interrupts */
+        Machine.interrupt().restore(intStatus);
+    }
+
+    /**
+     * Gets the priority of a thread()
+     */
+    public int getPriority() {
+    	/* Disable interrupts */
+    	boolean intStatus = Machine.interrupt().disable();
+
+    	/* Talk to the scheduler */
+    	int priority = ThreadedKernel.scheduler.getPriority(this);
+
+    	/* Restore interrupts */
+    	Machine.interrupt().restore(intStatus);
+
+    	return priority;
+    }
     private static final char dbgThread = 't';
 
     /**
