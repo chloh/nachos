@@ -5,6 +5,7 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.util.Hashtable;
 
 /**
  * Encapsulates the state of a user process that is not contained in its
@@ -355,19 +356,25 @@ public class UserProcess {
     		}
     	}
     	unloadSections();
-    	children = childIDs.values();
-    	for (int i = 0; i < childIDs.length(); i++){	// disown children
-    		childIDs[i].parent = null;
+    	
+    	/*
+    	 * for child in childIDs:
+    	 *   childIDs[child] = null
+    	 */
+    	for (int child : childIDs.keySet()){	// disown children
+    		childIDs.get(child).parent = null;
     	}
-
+		
     	// tell parent your exit status
     	if (parent != null) {
-    		parent.childIDsStatus[this.PID]=a0; //a0 is status
+    		parent.childIDsStatus.put(this.PID,a0); //a0 is status
     	}
 
+    	// how can we determine if this is the last process?
     	if (lastProcess) {
     		Kernel.kernel.terminate();
     	}
+    	// what child is this referring to?
     	child.parent = this; 
     }
     
@@ -395,7 +402,7 @@ public class UserProcess {
 	    	success = child.execute(name, argv); //call the child with argv
 	    	childIDs.put(child.PID, child);
 	    	return child.PID;
-    	} catch {
+    	} catch(Exception e) {
     		return -1;
     	}
     }
@@ -423,7 +430,7 @@ public class UserProcess {
      */
     private int handleHalt() {
 	    if (PID == 0) {
-	    	Machine.halt()
+	    	Machine.halt();
 	    	return 0;
 	    } else {
 	    	return -1;
@@ -483,14 +490,14 @@ public class UserProcess {
     	    if (openFile == null) {
     	    	return -1;
     	    } else {
-    			for(int i = 0; i < FDs.length; i++;){
+    			for(int i = 0; i < FDs.length; i++){
     				if (FDs[i] == null) {
     					FDs[i] = openFile;
     					positions[i] = 0;
     					return i;
     				}
     			}
-    	} catch {
+    	} catch(Exception e) {
     		return -1;
     	}
     }
@@ -502,7 +509,7 @@ public class UserProcess {
     	try {
     		if(FDs[a0] != null){
     			byte[] buffer = new byte[a2];
-    			pos = positions[a0]
+    			int pos = positions[a0];
     			FDs[a0].read(pos, buffer, 0, a2);
     			positions[a0] += a2;
     			return writeVirtualMemory(a1,buffer,0,size);
@@ -687,11 +694,15 @@ public class UserProcess {
     // For PART I
     private OpenFile[] FDs = new OpenFile[16];
     private int[] positions = new int[16];
-    private int static totalPid = 0;
+    private static int totalPid = 0;
     // For PART III
     UThread initialThread;
     private Communicator communicator;
     private UserProcess parent;
     private Hashtable<Integer, UserProcess> childIDs;
     private Hashtable<Integer, Integer> childIDsStatus;
+    // I think we need to instantiate the lock above the UserProcess level
+    private static Lock lock;
+    private int PID;
+    private static int totalPID;
 }
