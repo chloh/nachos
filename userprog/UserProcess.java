@@ -361,8 +361,8 @@ public class UserProcess {
     	 * for child in childIDs:
     	 *   childIDs[child] = null
     	 */
-    	for (int child : childIDs.keySet()){	// disown children
-    		childIDs.get(child).parent = null;
+    	for (UserProcess child : childIDs.values()){	// disown children
+    		child.parent = null;
     	}
 		
     	// tell parent your exit status
