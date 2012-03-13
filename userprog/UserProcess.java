@@ -483,6 +483,7 @@ public class UserProcess {
     	try {
     		String name = readVirtualMemoryString(a0,256);
     		OpenFile openFile = UserKernel.fileSystem.open(name,false);
+    		int value = -1;
     	    if (openFile == null) {
     	    	return -1;
     	    } else {
@@ -490,9 +491,10 @@ public class UserProcess {
     				if (FDs[i] == null) {
     					FDs[i] = openFile;
     					positions[i] = 0;
-    					return i;
+    					value = i;
     				}
     			}
+    			return value; // value is initially -1, returns if no successful FD, else returns FD
     	    }
     	}catch(Exception e) {
     		return -1;
