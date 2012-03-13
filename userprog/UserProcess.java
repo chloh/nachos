@@ -28,10 +28,10 @@ public class UserProcess {
 	pageTable = new TranslationEntry[numPhysPages];
 	for (int i=0; i<numPhysPages; i++)
 	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
-	lock.acquire(); // atomic construction
+	UserKernel.PIDLock.acquire(); // atomic construction
 	PID = totalPID;
 	totalPID++;
-	lock.release();
+	UserKernel.PIDLock.release();
 	FDs[0] = UserKernel.console.openForReading();
 	FDs[1] = UserKernel.console.openForWriting();
     }
@@ -563,7 +563,8 @@ public class UserProcess {
     private int handleUnlink(int a0){
     	try{
     		String name = readVirtualMemoryString(a0,256);
-    		if (StubFileSystem.remove(name)) {
+    		if(UserKernel.fileSystem.remove(name)){
+    		//if (StubFileSystem.remove(name)) {
     			return 0;
     		} else {
     			return -1;
