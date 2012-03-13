@@ -442,7 +442,7 @@ public class UserProcess {
     /**
      * Handle the creat() system call. 
      */
-    private int handeCreate(int a0){
+    private int handleCreate(int a0){
     	int value = -1;
     	try{ 
     		
@@ -694,7 +694,7 @@ public class UserProcess {
     // For PART I
     private OpenFile[] FDs = new OpenFile[16];
     private int[] positions = new int[16];
-    private static int totalPid = 0;
+    
     // For PART III
     UThread initialThread;
     private Communicator communicator;
@@ -702,7 +702,7 @@ public class UserProcess {
     private Hashtable<Integer, UserProcess> childIDs;
     private Hashtable<Integer, Integer> childIDsStatus;
     // I think we need to instantiate the lock above the UserProcess level
-    private static Lock lock;
+    //private static Lock lock;
     private int PID;
     private static int totalPID;
 }
