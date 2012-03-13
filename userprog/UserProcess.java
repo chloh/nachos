@@ -384,8 +384,8 @@ public class UserProcess {
     private int handleExec(int a0, int a1, int a2){
     	try {
 	    	String name = readVirtualMemoryString(a0,256);
-	    	int start = a2
-	    	String[] argv = new String[argc]
+	    	int start = a2;
+	    	String[] argv = new String[argc];
 	    	UserProcess child = new UserProcess();
 	    	child.parent = this;
 	    	boolean success;
@@ -396,7 +396,7 @@ public class UserProcess {
 	    		//null terminator. Once we do, we update the start pointer
 	    		//so argv[i+1] starts reading from memory at the correct 
 	    		//place
-	    		argv[i] = readVirtualMemory(start)
+	    		argv[i] = readVirtualMemory(start);
 	    		start += argv[i].length() + 1; //1 from null terminator
 	    	}
 	    	success = child.execute(name, argv); //call the child with argv
@@ -413,9 +413,9 @@ public class UserProcess {
     private int handleJoin(int a0, int a1) {
     	if (childIDs.containsKey(a0)) {
     		
-    		child = childIDs.get(a0); //check if null
+    		UserProcess child = childIDs.get(a0); //check if null
     		child.initialThread.join();
-    		int childExitStatus = childIDsStatus[child.PID]
+    		int childExitStatus = childIDsStatus.get(child.PID);
     		//convert childExitStatus to array of bytes
     		writeVirtualMemory(a1, childExitStatus);
     		childIDs.remove(a0);
@@ -443,9 +443,9 @@ public class UserProcess {
      * Handle the creat() system call. 
      */
     private int handeCreate(int a0){
+    	int value = -1;
     	try{ 
-    		int value;
-    		boolean success;
+    		
     		String name = readVirtualMemoryString(a0,256);
     		boolean full = true;
     		for(int i = 0; i < FDs.length;i++){
@@ -461,24 +461,20 @@ public class UserProcess {
     		if (creatFile != null){
     			for(int i = 0; i < FDs.length; i++){
     				if (FDs[i] == null) {
-						FDs[i] = creatFile
-						positions[i] = 0
+						FDs[i] = creatFile;
+						positions[i] = 0;
 						value = i;
     				}
     			}
-    		} else {
-    			return -1
-    		}
-    	} catch {
-			success = false;
-    	} finally {
-    		if(success) {
-    			return value;
+    			return value; // either an index [0,16] or -1
     		} else {
     			return -1;
     		}
+    	} catch(Exception e) {
+			return -1;
     	}
     }
+
     
     /**
      * Handle the open() system call. 
@@ -497,7 +493,8 @@ public class UserProcess {
     					return i;
     				}
     			}
-    	} catch(Exception e) {
+    	    }
+    	}catch(Exception e) {
     		return -1;
     	}
     }
@@ -512,11 +509,11 @@ public class UserProcess {
     			int pos = positions[a0];
     			FDs[a0].read(pos, buffer, 0, a2);
     			positions[a0] += a2;
-    			return writeVirtualMemory(a1,buffer,0,size);
+    			return writeVirtualMemory(a1,buffer,0,a2); // is size -> a2
     		} else {
-    			return -1
+    			return -1;
     		}
-    	} catch {
+    	} catch(Exception e) {
     		return -1;
     	}
     }
@@ -528,14 +525,14 @@ public class UserProcess {
     	try{
 	    	if (FDs[a0] != null) {
 	    		byte[] buffer = new byte[a2];
-	    		start = positions[a0]
-	    		amount = readVirtualMemory( a1, buffer, 0, a2);
+	    		int start = positions[a0];
+	    		int amount = readVirtualMemory( a1, buffer, 0, a2);
 	    		positions[a0] += amount;
 	    		return FDs[a0].write(start, buffer, 0, amount);
 	    	} else {
 	    		return -1;
 	    	}
-    	} catch {
+    	} catch(Exception e) {
     		return -1;
     	}
     }
@@ -546,15 +543,15 @@ public class UserProcess {
     private int handleClose(int a0){
     	try {
     		if (FDs[a0] != null) {
-    			FDs[a0].close()
+    			FDs[a0].close();
     			FDs[a0] = null;
-    			positions[a0] = null;
+    			positions[a0] = 0;
     			return 0;
     		} else {
     			return -1;
     		}
-    	} catch {
-    		return -1
+    	} catch(Exception e) {
+    		return -1;
     	}
     }
     
@@ -569,8 +566,8 @@ public class UserProcess {
     		} else {
     			return -1;
     		} 
-    	} catch {
-    		return -1
+    	} catch(Exception e) {
+    		return -1;
     	}		
     }
     
