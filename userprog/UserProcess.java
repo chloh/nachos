@@ -27,6 +27,12 @@ public class UserProcess {
 	pageTable = new TranslationEntry[numPhysPages];
 	for (int i=0; i<numPhysPages; i++)
 	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
+	lock.acquire(); // atomic construction
+	PID = totalPID;
+	totalPID++;
+	lock.release();
+	FDs[0] = UserKernel.console.openForReading();
+	FDs[1] = UserKernel.console.openForWriting();
     }
     
     /**
@@ -51,9 +57,10 @@ public class UserProcess {
     public boolean execute(String name, String[] args) {
 	if (!load(name, args))
 	    return false;
+	initialThread = new UThread(this);
+	initialThread.setName(name);
+	initialThread.fork();
 	
-	new UThread(this).setName(name).fork();
-
 	return true;
     }
 
@@ -335,29 +342,242 @@ public class UserProcess {
 	processor.writeRegister(Processor.regA1, argv);
     }
 
+    
+ // PART III CODE
+    /**
+     * Handle the exit() system call. 
+     */
+    private void handleExit(int a0){
+    	//terminate thread?
+    	for (int i = 0; i < FDs.length; i++) {
+    		if (FDs[i] != null) {
+    			FDs[i].close();
+    		}
+    	}
+    	unloadSections();
+    	children = childIDs.values();
+    	for (int i = 0; i < childIDs.length(); i++){	// disown children
+    		childIDs[i].parent = null;
+    	}
+
+    	// tell parent your exit status
+    	if (parent != null) {
+    		parent.childIDsStatus[this.PID]=a0; //a0 is status
+    	}
+
+    	if (lastProcess) {
+    		Kernel.kernel.terminate();
+    	}
+    	child.parent = this; 
+    }
+    
+    /**
+     * Handle the exec() system call. 
+     */
+    private int handleExec(int a0, int a1, int a2){
+    	try {
+	    	String name = readVirtualMemoryString(a0,256);
+	    	int start = a2
+	    	String[] argv = new String[argc]
+	    	UserProcess child = new UserProcess();
+	    	child.parent = this;
+	    	boolean success;
+	    	for(int i = 0; i < argc; i++){
+	    		//These are the arguments to the child process, they can
+	    		//be arbitrarily long so for each argv[i] we need to loop
+	    		//in the memory from the start position until we reach a 
+	    		//null terminator. Once we do, we update the start pointer
+	    		//so argv[i+1] starts reading from memory at the correct 
+	    		//place
+	    		argv[i] = readVirtualMemory(start)
+	    		start += argv[i].length() + 1; //1 from null terminator
+	    	}
+	    	success = child.execute(name, argv); //call the child with argv
+	    	childIDs.put(child.PID, child);
+	    	return child.PID;
+    	} catch {
+    		return -1;
+    	}
+    }
+    
+    /**
+     * Handle the join() system call.
+     */
+    private int handleJoin(int a0, int a1) {
+    	if (childIDs.containsKey(a0)) {
+    		
+    		child = childIDs.get(a0); //check if null
+    		child.initialThread.join();
+    		int childExitStatus = childIDsStatus[child.PID]
+    		//convert childExitStatus to array of bytes
+    		writeVirtualMemory(a1, childExitStatus);
+    		childIDs.remove(a0);
+    	} else {
+    		return -1;
+    	}
+    }
+    
+    
     /**
      * Handle the halt() system call. 
      */
     private int handleHalt() {
-
-	Machine.halt();
-	
-	Lib.assertNotReached("Machine.halt() did not halt machine!");
-	return 0;
+	    if (PID == 0) {
+	    	Machine.halt()
+	    	return 0;
+	    } else {
+	    	return -1;
+	    }
+		Lib.assertNotReached("Machine.halt() did not halt machine!");
     }
 
-
+ // PART I CODE
+    /**
+     * Handle the creat() system call. 
+     */
+    private int handeCreate(int a0){
+    	try{ 
+    		int value;
+    		boolean success;
+    		String name = readVirtualMemoryString(a0,256);
+    		boolean full = true;
+    		for(int i = 0; i < FDs.length;i++){
+    			if(FDs[i] == null) {
+    				full = false;
+    			}
+    		}
+    		if(full){
+    			return -1;
+    		}
+    		OpenFile creatFile = UserKernel.fileSystem.open(name,true);
+    		//we can only have 16 files make sure to check before making
+    		if (creatFile != null){
+    			for(int i = 0; i < FDs.length; i++){
+    				if (FDs[i] == null) {
+						FDs[i] = creatFile
+						positions[i] = 0
+						value = i;
+    				}
+    			}
+    		} else {
+    			return -1
+    		}
+    	} catch {
+			success = false;
+    	} finally {
+    		if(success) {
+    			return value;
+    		} else {
+    			return -1;
+    		}
+    	}
+    }
+    
+    /**
+     * Handle the open() system call. 
+     */
+    private int handleOpen(int a0){
+    	try {
+    		String name = readVirtualMemoryString(a0,256);
+    		OpenFile openFile = UserKernel.fileSystem.open(name,false);
+    	    if (openFile == null) {
+    	    	return -1;
+    	    } else {
+    			for(int i = 0; i < FDs.length; i++;){
+    				if (FDs[i] == null) {
+    					FDs[i] = openFile;
+    					positions[i] = 0;
+    					return i;
+    				}
+    			}
+    	} catch {
+    		return -1;
+    	}
+    }
+   
+	/**
+     * Handle the read() system call. 
+     */
+    private int handleRead(int a0, int a1, int a2){
+    	try {
+    		if(FDs[a0] != null){
+    			byte[] buffer = new byte[a2];
+    			pos = positions[a0]
+    			FDs[a0].read(pos, buffer, 0, a2);
+    			positions[a0] += a2;
+    			return writeVirtualMemory(a1,buffer,0,size);
+    		} else {
+    			return -1
+    		}
+    	} catch {
+    		return -1;
+    	}
+    }
+    
+    /**
+     * Handle the write() system call. 
+     */
+    private int handleWrite(int a0, int a1, int a2){
+    	try{
+	    	if (FDs[a0] != null) {
+	    		byte[] buffer = new byte[a2];
+	    		start = positions[a0]
+	    		amount = readVirtualMemory( a1, buffer, 0, a2);
+	    		positions[a0] += amount;
+	    		return FDs[a0].write(start, buffer, 0, amount);
+	    	} else {
+	    		return -1;
+	    	}
+    	} catch {
+    		return -1;
+    	}
+    }
+    
+    /**
+     * Handle the close() system call. 
+     */
+    private int handleClose(int a0){
+    	try {
+    		if (FDs[a0] != null) {
+    			FDs[a0].close()
+    			FDs[a0] = null;
+    			positions[a0] = null;
+    			return 0;
+    		} else {
+    			return -1;
+    		}
+    	} catch {
+    		return -1
+    	}
+    }
+    
+    /**
+     * Handle the unlink() system call. 
+     */
+    private int handleUnlink(int a0){
+    	try{
+    		String name = readVirtualMemoryString(a0,256);
+    		if (StubFileSystem.remove(name)) {
+    			return 0;
+    		} else {
+    			return -1;
+    		} 
+    	} catch {
+    		return -1
+    	}		
+    }
+    
     private static final int
         syscallHalt = 0,
-	syscallExit = 1,
-	syscallExec = 2,
-	syscallJoin = 3,
-	syscallCreate = 4,
-	syscallOpen = 5,
-	syscallRead = 6,
-	syscallWrite = 7,
-	syscallClose = 8,
-	syscallUnlink = 9;
+		syscallExit = 1,
+		syscallExec = 2,
+		syscallJoin = 3,
+		syscallCreate = 4,
+		syscallOpen = 5,
+		syscallRead = 6,
+		syscallWrite = 7,
+		syscallClose = 8,
+		syscallUnlink = 9;
 
     /**
      * Handle a syscall exception. Called by <tt>handleException()</tt>. The
@@ -391,8 +611,24 @@ public class UserProcess {
 	switch (syscall) {
 	case syscallHalt:
 	    return handleHalt();
-
-
+	case syscallExit:
+	    return handleExit(a0);
+	case syscallExec:
+		return handleExec(a0,a1,a2);
+	case syscallJoin:
+		return handleJoin(a0,a1);
+	case syscallCreate:
+		return handleCreate(a0);
+	case syscallOpen:
+		return handleOpen(a0);
+	case syscallRead:
+		return handleRead(a0,a1,a2);
+	case syscallWrite:
+		return handleWrite(a0,a1,a2);
+	case syscallClose:
+		return handleClose(a0);
+	case syscallUnlink:
+	    return handleUnlink(a0);
 	default:
 	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 	    Lib.assertNotReached("Unknown system call!");
@@ -446,4 +682,16 @@ public class UserProcess {
 	
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
+    
+    // Group 33 implementation
+    // For PART I
+    private OpenFile[] FDs = new OpenFile[16];
+    private int[] positions = new int[16];
+    private int static totalPid = 0;
+    // For PART III
+    UThread initialThread;
+    private Communicator communicator;
+    private UserProcess parent;
+    private Hashtable<Integer, UserProcess> childIDs;
+    private Hashtable<Integer, Integer> childIDsStatus;
 }
