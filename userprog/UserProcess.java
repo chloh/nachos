@@ -417,7 +417,9 @@ public class UserProcess {
     		child.initialThread.join();
     		int childExitStatus = childIDsStatus.get(child.PID);
     		//convert childExitStatus to array of bytes
-    		writeVirtualMemory(a1, childExitStatus);
+    		byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
+    		//writeVirtualMemory(a1, childExitStatus);
+    		writeVirtualMemory(a1, exitStatus);
     		childIDs.remove(a0);
     	} else {
     		return -1;
