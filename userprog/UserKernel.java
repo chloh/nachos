@@ -22,6 +22,7 @@ public class UserKernel extends ThreadedKernel {
 		for(int i=0; i<numPhysPages; i++){
 			pageList.add(i);
 		}
+		PIDlock = new Lock();
 	}
 
 	public int[] getMemory(int numPages) {
@@ -205,7 +206,7 @@ public class UserKernel extends ThreadedKernel {
     private static Coff dummy1 = null;
     
     // Adding the PIDLock here
-    public static Lock PIDLock = new Lock();
+    public Lock PIDLock;
     
     private static int pageSize = Machine.processor().pageSize;
 }
