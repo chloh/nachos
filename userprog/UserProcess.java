@@ -140,15 +140,45 @@ public class UserProcess {
 	Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 
 	byte[] memory = Machine.processor().getMemory();
-	
-	// for now, just assume that virtual addresses equal physical addresses
-	if (vaddr < 0 || vaddr >= memory.length)
-	    return 0;
+	// this is what we should have done
+	int vpn = Processor.pageFromAddress(vaddr);
+	int vOffset = Processor.offsetFromAddress(vaddr);
+	int tmpLength = length;
+	int pagesToCopy = 0;
+	// read multiple pages?
+	if (tmpLength > pageSize - vOffset) {
+		pagesToCopy++;
+		tmpLength = tmpLength - (pageSize - vOffset);
+	}
+	if (tmpLength > 0)
+		pagesToCopy += Lib.divRoundUp(tmpLength, Processor.pageSize);
 
-	int amount = Math.min(length, memory.length-vaddr);
-	System.arraycopy(memory, vaddr, data, offset, amount);
-
-	return amount;
+	int amount = 0;
+	int dOffset = offset;
+	tmpLength = length;
+	for (int i=0; i<pagesToCopy; i++) {
+		if (pageTable[vpn+i] == null)
+			break;
+		int ppn = pageTable[vpn+i].ppn;
+		int tmpOffset = vOffset;
+		int paddr;
+		if (i==0)
+			paddr = Processor.makeAddress(ppn, vOffset);
+		else {
+			paddr = Processor.makeAddress(ppn, 0);
+			tmpOffset = 0;
+		}
+		if (paddr < 0 || paddr >= memory.length)
+			return 0;
+		int tmpAmount = Math.min(tmpLength, memory.length-paddr);
+		tmpAmount = Math.min(tmpAmount, (Processor.pageSize-tmpOffset));
+		// do the actual transfer
+		System.arraycopy(memory, paddr, data, dOffset, tmpAmount);
+		dOffset += tmpAmount;
+		tmpLength -= tmpAmount;
+		amount += tmpAmount;
+	}
+		return amount;
     }
 
     /**
@@ -179,20 +209,53 @@ public class UserProcess {
      * @return	the number of bytes successfully transferred.
      */
     public int writeVirtualMemory(int vaddr, byte[] data, int offset,
-				  int length) {
-	Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+			int length) {
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 
-	byte[] memory = Machine.processor().getMemory();
-	
-	// for now, just assume that virtual addresses equal physical addresses
-	if (vaddr < 0 || vaddr >= memory.length)
-	    return 0;
+		byte[] memory = Machine.processor().getMemory();
+		int vpn = Processor.pageFromAddress(vaddr);
+		int vOffset = Processor.offsetFromAddress(vaddr);
+		int tmpLength = length;
+		int pagesToCopy = 0;
+//		if statement checks if it needs to read from multiple pages
+		if (tmpLength > pageSize - vOffset) {
+			pagesToCopy++;
+			tmpLength = tmpLength - (pageSize - vOffset);
+		}
+//		tmpLength now starts from the beginning of a page, so we can just divide, rounding up
+		if (tmpLength > 0)
+			pagesToCopy += Lib.divRoundUp(tmpLength, Processor.pageSize);
 
-	int amount = Math.min(length, memory.length-vaddr);
-	System.arraycopy(data, offset, memory, vaddr, amount);
+		int amount = 0;
+		int dOffset = offset;
+		tmpLength = length;
+		for (int i=0; i<pagesToCopy; i++) {
+			if (pageTable[vpn+i]==null)
+				break;
+			int ppn = pageTable[vpn+i].ppn;
+			int tmpOffset = vOffset;
+			int paddr;
+			// start from the offset
+			if (i==0)
+				paddr = Processor.makeAddress(ppn, vOffset);
+			// starting from beginning, no offset
+			else {
+				paddr = Processor.makeAddress(ppn, 0);
+				tmpOffset = 0;
+			}
+			if (paddr < 0 || paddr >= memory.length)
+				return 0;
+			int tempAmount = Math.min(tmpLength, memory.length-paddr);
+			tempAmount = Math.min(tempAmount, (pageSize-tmpOffset));
+			// perform the actual data transfer
+			System.arraycopy(data, dOffset, memory, paddr, tempAmount);
+			dOffset += tempAmount;
+			tmpLength -= tempAmount;
+			amount += tempAmount;
+		}
+		return amount;
+	}
 
-	return amount;
-    }
 
     /**
      * Load the executable with the specified name into this process, and
@@ -305,7 +368,17 @@ public class UserProcess {
 
 	    for (int i=0; i<section.getLength(); i++) {
 		int vpn = section.getFirstVPN()+i;
-
+		mutex.acquire();
+		if (UserKernel.pageList.size() == 0)
+			return false;
+		int first = UserKernel.pageList.getFirst();
+		if (section.isReadOnly()) {
+			pageTable[vpn] = new TranslationEntry (vpn, first, true, true, false, false);
+		} else { 
+			pageTable[vpn] = new TranslationEntry (vpn, first, true, false, false, false);
+		}
+		UserKernel.pageList.removeFirst();
+		mutex.release();
 		// for now, just assume virtual addresses=physical addresses
 		section.loadPage(i, vpn);
 	    }
@@ -318,7 +391,14 @@ public class UserProcess {
      * Release any resources allocated by <tt>loadSections()</tt>.
      */
     protected void unloadSections() {
-    }    
+        for (int s=0; s<numPages; s++) {
+                mutex.acquire(); 
+                int ppn = pageTable[s].ppn;
+                pageTable[s] = null;
+                UserKernel.pageList.add(ppn);
+                mutex.release();                 
+        }
+} 
 
     /**
      * Initialize the processor's registers in preparation for running the
@@ -354,6 +434,7 @@ public class UserProcess {
 	    	for (int i = 0; i < FDs.length; i++) {
 	    		if (FDs[i] != null) {
 	    			FDs[i].close();
+	    			FDs[i] = null;
 	    		}
 	    	}
 	    	unloadSections();
@@ -715,4 +796,5 @@ public class UserProcess {
     //private static Lock lock;
     private int PID;
     private static int totalPID;
+    private static Lock mutex = new Lock();
 }

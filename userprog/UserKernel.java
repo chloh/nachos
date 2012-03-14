@@ -201,7 +201,7 @@ public class UserKernel extends ThreadedKernel {
 	super.terminate();
     }
     
-    LinkedList<Integer> pageList;
+    static LinkedList<Integer> pageList;
 	Lock lock;//= new Lock(); 
 
     /** Globally accessible reference to the synchronized console. */
