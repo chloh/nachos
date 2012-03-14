@@ -17,13 +17,11 @@ public class UserKernel extends ThreadedKernel {
 	
 	public UserKernel() {
 		super();
+		pageList = new LinkedList<Integer>();
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		for(int i=0; i<numPhysPages; i++){
 			pageList.add(i);
 		}
-		Lib.debug('a', "before locks");
-		
-		Lib.debug('a', "after locks");
 	}
 
 	public int[] getMemory(int numPages) {
@@ -118,7 +116,7 @@ public class UserKernel extends ThreadedKernel {
 	console = new SynchConsole(Machine.console());
 	lock = new Lock();
 	PIDLock = new Lock();
-	pageList = new LinkedList<Integer>();
+	
 	
 	Machine.processor().setExceptionHandler(new Runnable() {
 		public void run() { exceptionHandler(); }
