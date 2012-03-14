@@ -118,6 +118,7 @@ public class UserKernel extends ThreadedKernel {
 	console = new SynchConsole(Machine.console());
 	lock = new Lock();
 	PIDLock = new Lock();
+	pageList = new LinkedList<Integer>();
 	
 	Machine.processor().setExceptionHandler(new Runnable() {
 		public void run() { exceptionHandler(); }
@@ -202,7 +203,7 @@ public class UserKernel extends ThreadedKernel {
 	super.terminate();
     }
     
-    LinkedList<Integer> pageList = new LinkedList<Integer>();
+    LinkedList<Integer> pageList;
 	Lock lock;//= new Lock(); 
 
     /** Globally accessible reference to the synchronized console. */
@@ -212,7 +213,7 @@ public class UserKernel extends ThreadedKernel {
     private static Coff dummy1 = null;
     
     // Adding the PIDLock here
-    public Lock PIDLock;// = new Lock();
+    public static Lock PIDLock;// = new Lock();
     
     private static int pageSize = Machine.processor().pageSize;
 }
