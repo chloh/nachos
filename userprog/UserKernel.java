@@ -22,7 +22,7 @@ public class UserKernel extends ThreadedKernel {
 		for(int i=0; i<numPhysPages; i++){
 			pageList.add(i);
 		}
-		PIDlock = new Lock();
+		PIDLock = new Lock();
 	}
 
 	public int[] getMemory(int numPages) {
