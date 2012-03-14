@@ -14,7 +14,7 @@ public class UserKernel extends ThreadedKernel {
      * Allocate a new user kernel.
      */
 	LinkedList<Integer> pageList = new LinkedList<Integer>();
-	Lock lock = new Lock();
+	Lock lock; 
 	
 	public UserKernel() {
 		super();
@@ -22,6 +22,7 @@ public class UserKernel extends ThreadedKernel {
 		for(int i=0; i<numPhysPages; i++){
 			pageList.add(i);
 		}
+		lock = = new Lock();
 		PIDLock = new Lock();
 	}
 
