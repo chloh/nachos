@@ -22,8 +22,7 @@ public class UserKernel extends ThreadedKernel {
 			pageList.add(i);
 		}
 		Lib.debug('a', "before locks");
-		lock = new Lock();
-		PIDLock = new Lock();
+		
 		Lib.debug('a', "after locks");
 	}
 
@@ -202,7 +201,7 @@ public class UserKernel extends ThreadedKernel {
     }
     
     LinkedList<Integer> pageList = new LinkedList<Integer>();
-	Lock lock; 
+	Lock lock = new Lock(); 
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
@@ -211,7 +210,7 @@ public class UserKernel extends ThreadedKernel {
     private static Coff dummy1 = null;
     
     // Adding the PIDLock here
-    public Lock PIDLock;
+    public Lock PIDLock = new Lock();
     
     private static int pageSize = Machine.processor().pageSize;
 }
