@@ -348,34 +348,39 @@ public class UserProcess {
     /**
      * Handle the exit() system call. 
      */
-    private void handleExit(int a0){
-    	//terminate thread?
-    	for (int i = 0; i < FDs.length; i++) {
-    		if (FDs[i] != null) {
-    			FDs[i].close();
-    		}
+    private int handleExit(int a0){
+    	try {
+	    	//terminate thread?
+	    	for (int i = 0; i < FDs.length; i++) {
+	    		if (FDs[i] != null) {
+	    			FDs[i].close();
+	    		}
+	    	}
+	    	unloadSections();
+	    	
+	    	/*
+	    	 * for child in childIDs:
+	    	 *   childIDs[child] = null
+	    	 */
+	    	for (UserProcess child : childIDs.values()){	// disown children
+	    		child.parent = null;
+	    	}
+			
+	    	// tell parent your exit status
+	    	if (parent != null) {
+	    		parent.childIDsStatus.put(this.PID,a0); //a0 is status
+	    	}
+	
+	    	// if I am root
+	    	if (PID == 0) {
+	    		Kernel.kernel.terminate();
+	    	}
+	    	// what child is this referring to?
+	    	//child.parent = this; 
+	    	return 0;
+    	} catch (Exception e){
+    		return -1;
     	}
-    	unloadSections();
-    	
-    	/*
-    	 * for child in childIDs:
-    	 *   childIDs[child] = null
-    	 */
-    	for (UserProcess child : childIDs.values()){	// disown children
-    		child.parent = null;
-    	}
-		
-    	// tell parent your exit status
-    	if (parent != null) {
-    		parent.childIDsStatus.put(this.PID,a0); //a0 is status
-    	}
-
-    	// how can we determine if this is the last process?
-    	if (lastProcess) {
-    		Kernel.kernel.terminate();
-    	}
-    	// what child is this referring to?
-    	child.parent = this; 
     }
     
     /**
@@ -396,7 +401,9 @@ public class UserProcess {
 	    		//null terminator. Once we do, we update the start pointer
 	    		//so argv[i+1] starts reading from memory at the correct 
 	    		//place
-	    		argv[i] = readVirtualMemory(start);
+	    		// why are we not using readVirtualMemoryString here? It finds the null-terminator for us.
+	    		// readVirtualMemoryString(start, 256)
+	    		argv[i] = readVirtualMemoryString(start,256);
 	    		start += argv[i].length() + 1; //1 from null terminator
 	    	}
 	    	success = child.execute(name, argv); //call the child with argv
@@ -411,8 +418,7 @@ public class UserProcess {
      * Handle the join() system call.
      */
     private int handleJoin(int a0, int a1) {
-    	if (childIDs.containsKey(a0)) {
-    		
+    	if (childIDs.containsKey(a0)) { 		
     		UserProcess child = childIDs.get(a0); //check if null
     		child.initialThread.join();
     		int childExitStatus = childIDsStatus.get(child.PID);
@@ -421,6 +427,7 @@ public class UserProcess {
     		//writeVirtualMemory(a1, childExitStatus);
     		writeVirtualMemory(a1, exitStatus);
     		childIDs.remove(a0);
+    		return 0;
     	} else {
     		return -1;
     	}
@@ -435,9 +442,10 @@ public class UserProcess {
 	    	Machine.halt();
 	    	return 0;
 	    } else {
+	    	Lib.assertNotReached("Machine.halt() did not halt machine!");
 	    	return -1;
 	    }
-		Lib.assertNotReached("Machine.halt() did not halt machine!");
+		
     }
 
  // PART I CODE
