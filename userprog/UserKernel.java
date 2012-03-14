@@ -13,8 +13,7 @@ public class UserKernel extends ThreadedKernel {
     /**
      * Allocate a new user kernel.
      */
-	LinkedList<Integer> pageList = new LinkedList<Integer>();
-	Lock lock; 
+	
 	
 	public UserKernel() {
 		super();
@@ -22,6 +21,7 @@ public class UserKernel extends ThreadedKernel {
 		for(int i=0; i<numPhysPages; i++){
 			pageList.add(i);
 		}
+		Lib.debug('a', "before locks");
 		lock = new Lock();
 		PIDLock = new Lock();
 	}
@@ -199,6 +199,9 @@ public class UserKernel extends ThreadedKernel {
     public void terminate() {
 	super.terminate();
     }
+    
+    LinkedList<Integer> pageList = new LinkedList<Integer>();
+	Lock lock; 
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
