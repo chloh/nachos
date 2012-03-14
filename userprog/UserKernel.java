@@ -24,6 +24,7 @@ public class UserKernel extends ThreadedKernel {
 		Lib.debug('a', "before locks");
 		lock = new Lock();
 		PIDLock = new Lock();
+		Lib.debug('a', "after locks");
 	}
 
 	public int[] getMemory(int numPages) {
