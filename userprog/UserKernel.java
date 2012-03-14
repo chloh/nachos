@@ -1,5 +1,7 @@
 package nachos.userprog;
 
+import java.util.LinkedList;
+
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
@@ -11,9 +13,98 @@ public class UserKernel extends ThreadedKernel {
     /**
      * Allocate a new user kernel.
      */
-    public UserKernel() {
-	super();
-    }
+	LinkedList<Integer> pageList = new LinkedList<Integer>();
+	Lock lock = new Lock();
+	
+	public UserKernel() {
+		super();
+		int numPhysPages = Machine.processor().getNumPhysPages();
+		for(int i=0; i<numPhysPages; i++){
+			pageList.add(i);
+		}
+	}
+
+	public int[] getMemory(int numPages) {
+		lock.acquire();
+		int[] arr = new int[numPages];
+		if (pageList.size() > numPages) {
+			for(int i=0; i<numPages; i++){
+				arr[i] = pageList.removeFirst();
+			}
+		} else {
+			lock.release();
+			//return error;
+		}
+		lock.release();
+		return arr; 
+	}
+	
+	public void freeMemory(int[] pageArray) {
+		for(int i=0; i<pageArray.length; i++){
+			lock.acquire();
+			// zero out pages in memory
+			pageList.addFirst(pageArray[i]);
+			lock.release();
+		}
+	}
+	
+	public int readPhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {
+		int amount = 0;
+		byte[] memory = Machine.processor().getMemory();
+		// determine where to start reading the memory
+		int start = (ppnArray[0] * pageSize) + readOffset;
+		int end = (ppnArray[0] + 1) * pageSize;
+		amount = end - start;
+		//check that bounds do not exceed memory
+		System.arraycopy(memory, start, data, writeOffset, amount);
+		// if there are more pages we need to access
+		if (ppnArray.length > 1) {
+			length -= amount;
+			int amountAdded = amount;
+			for (int i = 1; i < ppnArray.length; i++) {
+				start = (ppnArray[i]*pageSize);
+				// if the last page is not a whole page
+				if (length < pageSize) amountAdded = length;
+				else { 
+					amountAdded = pageSize;
+				}
+				amount += amountAdded;
+				writeOffset += amountAdded;
+				System.arraycopy(memory, start, data, writeOffset, amountAdded);
+				length -= amountAdded;
+			}
+		}
+		return amount;
+	}
+	
+	public int writePhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {
+		int amount = 0;
+		byte[] memory = Machine.processor().getMemory();
+		// determine where to start reading the memory
+		int start = (ppnArray[0] * pageSize) + writeOffset;		
+		int end = (ppnArray[0] + 1) * pageSize;
+		amount = end - start;
+		//check that bounds do not exceed memory
+		System.arraycopy(data, readOffset, memory, start, amount);		
+		// if there are more pages we need to access
+		if (ppnArray.length > 1) {
+			length -= amount;
+			int amountAdded = amount;
+			for (int i = 1; i < ppnArray.length; i++) {
+				start = (ppnArray[i]*pageSize);
+				// if the last page is not a whole page
+				if (length < pageSize) amountAdded = length;
+				else { 
+					amountAdded = pageSize;
+				}
+				amount += amountAdded;
+				writeOffset += amountAdded;
+				System.arraycopy(data, readOffset, memory, start, amountAdded);				
+				length -= amountAdded;
+			}
+		}
+		return amount;
+	}
 
     /**
      * Initialize this kernel. Creates a synchronized console and sets the
@@ -115,4 +206,6 @@ public class UserKernel extends ThreadedKernel {
     
     // Adding the PIDLock here
     public static Lock PIDLock = new Lock();
+    
+    private static int pageSize = Machine.processor().pageSize;
 }
