@@ -421,8 +421,8 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 	
-	//new KThread(new PingTest(1)).setName("forked thread").fork();
-	//new PingTest(0).run();
+	new KThread(new PingTest(1)).setName("forked thread").fork();
+	new PingTest(0).run();
 
 	//Uncomment below to test KThread module
 	//KThreadSimpleTest.runTest();
@@ -440,7 +440,7 @@ public class KThread {
 	//CommunicatorTest.runTest();
 	
 	//Tests 5
-	PrioritySchedulerTest.runTest();
+	//PrioritySchedulerTest.runTest();
 	
 	//Tests boat module
 	//BoatTest.runTest();
