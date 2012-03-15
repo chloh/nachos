@@ -514,9 +514,9 @@ public class UserProcess {
 			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
 			Lib.debug('b', "after unloadSections: PID" + PID);
-
-			UThread.finish();
 			readyToJoin.V();
+			UThread.finish();
+			
 			return 0;
 		} catch (Exception e){
 			Lib.debug('c', "handleExit: "+e.getMessage());
@@ -598,10 +598,12 @@ public class UserProcess {
 				if (child == null) {
 					return -1;
 				}
+				/*
 				if (child.initialThread == null) {
 					Lib.debug('j', "before ready to join");
 					child.readyToJoin.P();
-				}
+				}*/
+				child.readyToJoin.P();
 
 				Lib.debug('j', "joining on child");
 				child.initialThread.join();
