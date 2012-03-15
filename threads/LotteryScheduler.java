@@ -1,8 +1,12 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import nachos.threads.PriorityScheduler.PriorityQueue;
+import nachos.threads.PriorityScheduler.ThreadState;
 
 import java.util.Collection;
+import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -38,6 +42,51 @@ public class LotteryScheduler extends PriorityScheduler {
     	super();
     }
     
+    protected LotteryThreadState getThreadState(KThread thread) {
+		if (thread.schedulingState == null)
+			thread.schedulingState = new LotteryThreadState(thread);
+
+		return (LotteryThreadState) thread.schedulingState;
+	}
+    
+    public void setPriority(KThread thread, int priority) {
+		Lib.assertTrue(Machine.interrupt().disabled());
+
+		Lib.assertTrue(priority >= priorityMinimum &&
+				priority <= priorityMaximum);
+
+		getThreadState(thread).setPriority(priority);
+	}
+
+	public boolean increasePriority() {
+		boolean intStatus = Machine.interrupt().disable();
+
+		KThread thread = KThread.currentThread();
+
+		int priority = getPriority(thread);
+		if (priority == priorityMaximum)
+			return false;
+
+		setPriority(thread, priority+1);
+
+		Machine.interrupt().restore(intStatus);
+		return true;
+	}
+
+	public boolean decreasePriority() {
+		boolean intStatus = Machine.interrupt().disable();
+
+		KThread thread = KThread.currentThread();
+
+		int priority = getPriority(thread);
+		if (priority == priorityMinimum)
+			return false;
+
+		setPriority(thread, priority-1);
+
+		Machine.interrupt().restore(intStatus);
+		return true;
+	}
     
     /**
      * Allocate a new lottery thread queue.
@@ -47,8 +96,8 @@ public class LotteryScheduler extends PriorityScheduler {
      *					to the owning thread.
      * @return	a new lottery thread queue.
      */
-    public ThreadQueue newThreadQueue(boolean transferPriority) {
-    	return new PriorityQueue(transferPriority);
+    public LotteryQueue newThreadQueue(boolean transferPriority) {
+    	return new LotteryQueue(transferPriority);
     }
     
     /**
@@ -63,14 +112,16 @@ public class LotteryScheduler extends PriorityScheduler {
 	 * The maximum priority that a thread can have. Do not change this value.
 	 */
 	public static final int priorityMaximum = Integer.MAX_VALUE; 
-
-
+	
 	protected class LotteryThreadState extends PriorityScheduler.ThreadState {
 
 		public LotteryThreadState(KThread thread) {
 			super(thread);
+			Lib.debug('t', "before setPriority");
+			setPriority(priorityDefault);
 		}
 
+		
 		@Override
 		public void finish() {
 			if (this.joinQueue == null) {
@@ -85,17 +136,50 @@ public class LotteryScheduler extends PriorityScheduler {
 			this.effectivePriority = effectiveTickets;
 			if (this.waitForAccessQueue != null) {
 				if (waitForAccessQueue.resourceHolder() != null) {
-					waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+					((LotteryThreadState) waitForAccessQueue.resourceHolder()).updateEffectivePriority(this.waitForAccessQueue);
 				}
 			}
 		}
+		
+		@Override
+		public void setPriority(int priority) {
+			Lib.debug('t', "Setting new priority from " + this.priority + " to " + priority);
+			if (this.priority == priority)
+				return;
+			
+			this.priority = priority;
+			
+			if (waitForAccessQueue == null) {
+				this.effectivePriority = priority;
+			} 
+			
+			//Now we need to update current thread state's priority
+			if(!this.resourcePriorities.isEmpty()) {
+				Lib.debug('t', "This thread has resourcePriorities");
+				PriorityQueue resourceQueue = this.resourcePriorities.keys().nextElement();
+				if (resourceQueue.transferPriority) {
+					this.updateEffectivePriority(resourceQueue);
+				}
+			}
 
+			if(this.waitForAccessQueue != null){
+				Lib.debug('t', "This thread is in a waitForAccessQueue");
+			    if(this.waitForAccessQueue.transferPriority){
+			        this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+			    }
+			}
+		}
+		
+		@Override
 		public void updateEffectivePriority(PriorityQueue waitQueue) {
 			// Update your hashtable with this effective priority
 				if (!waitQueue.transferPriority) {
 					return;
 				}
 				int waitingTickets = waitQueue.getPQ();
+				Lib.debug('t', "Printing waitQueue");
+				waitQueue.print();
+				Lib.debug('t', "waitingPriority: " + waitingTickets);
 				this.resourcePriorities.put(waitQueue,waitingTickets);
 				Collection<Integer> allValues = this.resourcePriorities.values();
 				int effectiveTickets = this.priority;
@@ -103,21 +187,21 @@ public class LotteryScheduler extends PriorityScheduler {
 					effectiveTickets += thisP;
 				}
 				this.effectivePriority = effectiveTickets;
+				Lib.debug('t', "new priority for " + thread + ": " + effectivePriority);
 				if (this.waitForAccessQueue != null) {
 					if (waitForAccessQueue.resourceHolder() != null) {
-						waitForAccessQueue.resourceHolder().
+						((LotteryThreadState) waitForAccessQueue.resourceHolder()).
 						updateEffectivePriority(this.waitForAccessQueue);
 					}
 				}
 		}
-
-
 	}
 
 	protected class LotteryQueue extends PriorityScheduler.PriorityQueue{
 
 		LotteryQueue(boolean transferPriority) {
 			super(transferPriority);
+			//waitQueue = new LinkedList<LotteryThreadState>();
 		}
 
 		protected int getPQ() {
@@ -132,6 +216,7 @@ public class LotteryScheduler extends PriorityScheduler {
 		}
 
 		protected ThreadState pickNextThread() {
+			Lib.debug('t', "running the new pick next thread" + waitQueue.size());
 			int[] eachTickets = new int[this.waitQueue.size()];
 			int totalTickets = 0;
 			for(int i = 0; i< this.waitQueue.size();i++){
@@ -139,17 +224,24 @@ public class LotteryScheduler extends PriorityScheduler {
 				int interTickets = intTS.getEffectivePriority();
 				totalTickets += interTickets;
 				eachTickets[i] = totalTickets;
+				Lib.debug('t', "interTickets " + interTickets);
 			}
-			Random generator = new Random ( 110100100 );
-			int winningTicket = generator.nextInt(totalTickets);
-			for(int i = 0; i < eachTickets.length; i++){
-				if(winningTicket < eachTickets[i]){
-					return waitQueue.get(i);
+			if (this.waitQueue.isEmpty()){
+				return null;
+			} else {
+				Random generator = new Random ( 110100100 );
+				int winningTicket = generator.nextInt(totalTickets);
+				for(int i = 0; i < eachTickets.length; i++){
+					if(winningTicket < eachTickets[i]){
+						return waitQueue.get(i);
+					}
 				}
 			}
 			return null;
 		}
-
+		
+		//protected LinkedList<LotteryThreadState> waitQueue;
+		//protected LotteryThreadState resourceHolder;
 	}
 
 
