@@ -251,6 +251,7 @@ public class UserProcess {
 		int[] ppnArray = new int[length/pageSize + 1];
 		ppnArray[0] = ppn;
 		// if the length of what we’re reading will overflow to the next // page
+		// TODO: look into if this if statement is correct
 		if (length > pageSize - writeOffset - 1) {
 			int newvaddr = vaddr;
 			int newVPN = vpn;
@@ -551,6 +552,7 @@ public class UserProcess {
 			String str;
 			Lib.debug('e', "Before loop");
 			for(int i = 0; i < a1; i++){
+				// TODO: this parser is not getting the arguments correctly
 				//These are the arguments to the child process, they can
 				//be arbitrarily long so for each argv[i] we need to loop
 				//in the memory from the start position until we reach a 
