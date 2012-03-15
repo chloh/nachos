@@ -619,6 +619,24 @@ public class UserProcess {
 				} else {
 					return 0;
 				}
+			/*
+			 * childIDs keeps track of active proccesses
+			 * if the child already exited, it'd be removed form childIDs
+			 * and would error if we tried to join on it again
+			 * this extra branch just checks if it's inactive, but was
+			 * at one time our child
+			 * 
+			 */
+			} else if(childIDsStatus.contains(a0)){
+				int childPID = a0;
+				int childExitStatus = childIDsStatus.get(childPID);
+				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
+				writeVirtualMemory(a1, exitStatus);
+				if (childExitStatus == 0) {
+					return 1;
+				} else {
+					return 0;
+				}
 			} else {
 				return -1;
 			}
