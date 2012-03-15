@@ -129,24 +129,26 @@ public class UserProcess {
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-		// find ppn and the offset on the page we’re reading
-		int ppn = pageTable[vaddr/pageSize].ppn;
-		int readOffset = vaddr - ((vaddr/pageSize)*pageSize);
-		pageTable[vaddr/pageSize].used = true;
-		// make an array of ppns in case the length of what we’re
-		// reading overflows to more than one page
+
+		// find vpn, which will give us the ppn and the offset on the page we’re reading
+		int vpn = Processor.pageFromAddress(vaddr);
+		int ppn = pageTable[vpn].ppn;
+		int readOffset = Processor.offsetFromAddress(vaddr);
+		pageTable[vpn].used = true;
+		// make an array of ppns in case the length of what we’re reading overflows to more than one page
 		int[] ppnArray = new int[length/pageSize + 1];
 		ppnArray[0] = ppn;
-		// if the length of what we’re reading will overflow to the next     // page
+		// if the length of what we’re reading will overflow to the next page:
 		if (length > pageSize - readOffset) {
 			int newvaddr = vaddr;
+			int newVPN = vpn;
 			int i = 1;
 			while (newvaddr < length+vaddr) {
-				// add the other pages we’ll be accessing into the
-				// ppnArray
+				// add the other pages we’ll be accessing into the ppnArray
 				newvaddr += pageSize;
-				ppnArray[i] = pageTable[newvaddr/pageSize].ppn;
-				pageTable[newvaddr/pageSize].used = true;
+				newVPN = Processor.pageFromAddress(newvaddr);
+				ppnArray[i] = pageTable[newVPN].ppn;
+				pageTable[newVPN].used = true;
 				i++;
 			}
 		}
@@ -183,10 +185,11 @@ public class UserProcess {
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset, int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 		// find ppn and the offset on the page we’re reading
-		int ppn = pageTable[vaddr/pageSize].ppn;
-	    int writeOffset = vaddr - ((vaddr/pageSize)*pageSize);		
-	    pageTable[vaddr/pageSize].used = true;
-	    pageTable[vaddr/pageSize].dirty = true; 
+		int vpn = Processor.pageFromAddress(vaddr);
+		int ppn = pageTable[vpn].ppn;
+		int writeOffset = Processor.offsetFromAddress(vaddr);		
+		pageTable[vpn].used = true;
+		pageTable[vpn].dirty = true; 
 		// make an array of ppns in case the length of what we’re
 		// reading overflows to more than one page
 		int[] ppnArray = new int[length/pageSize + 1];
@@ -194,20 +197,22 @@ public class UserProcess {
 		// if the length of what we’re reading will overflow to the next     // page
 		if (length > pageSize - writeOffset) {
 			int newvaddr = vaddr;
+			int newVPN = vpn;
 			int i = 1;
 			while (newvaddr < length+vaddr) {
 				// add the other pages we’ll be accessing into the
 				// ppnArray
 				newvaddr += pageSize;
-				ppnArray[i] = pageTable[newvaddr/pageSize].ppn;
-				pageTable[newvaddr/pageSize].used = true;
-			    pageTable[newvaddr/pageSize].dirty = true;
+				newVPN = Processor.pageFromAddress(newvaddr);
+				ppnArray[i] = pageTable[newVPN].ppn;
+				pageTable[newVPN].used = true;
+				pageTable[newVPN].dirty = true;
 				i++;
 			}
 		}
 		return ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
 	}
-	
+
 
 
 	/**
