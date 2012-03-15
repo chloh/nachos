@@ -157,7 +157,6 @@ public class UserProcess {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 		Lib.debug('c', "reading virtualMemory");
 		Lib.debug('c', "reading length: "+length);
-		Lib.debug('c', new String(data));
 
 		// find vpn, which will give us the ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
@@ -183,7 +182,7 @@ public class UserProcess {
 		}
 		int val = ((UserKernel) Kernel.kernel).readPhysMem(ppnArray, readOffset, length, data, offset);
 		Lib.debug('c', "read this much from phys memory: "+val);
-		Lib.debug('c', new String(data));
+		Lib.debug('c', "in buffer: " + new String(data));
 		return val;
 	}
 
@@ -218,6 +217,7 @@ public class UserProcess {
 			int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 		Lib.debug('c', "writing virtualMemory");
+		Lib.debug('c', "data we're writing: "+ new String(data));
 		// find ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
 		int ppn = pageTable[vpn].ppn;
@@ -244,6 +244,8 @@ public class UserProcess {
 				i++;
 			}
 		}
+		int val = ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
+		Lib.debug('c', "Wrote this much to memory: "+ val);
 		return ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
 	}
 
@@ -261,6 +263,7 @@ public class UserProcess {
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
 		Lib.debug('c', "UserProcess.load(\"" + name + "\")");
+		Lib.debug('c', "UserProcess.load num args " + args.length);
 		for (int i = 0; i < args.length; i++) {
 			Lib.debug('c', "UserProcess.load arg "+i+": "+args[i]);
 		}
@@ -449,9 +452,9 @@ public class UserProcess {
 	 */
 	private int handleExit(int a0){
 		try {
-			if (PID == 0) {
-				return -1;
-			}
+			//if (PID == 0) {
+				//return -1;
+			//}
 			Lib.debug('c', "calling exit" + PID);
 			//terminate thread?
 			for (int i = 0; i < FDs.length; i++) {
@@ -513,6 +516,7 @@ public class UserProcess {
 				// why are we not using readVirtualMemoryString here? It finds the null-terminator for us.
 				// readVirtualMemoryString(start, 256)
 				argv[i] = readVirtualMemoryString(start,256);
+				Lib.debug('c', "argv["+i+"]: "+ argv[i]);
 				start += argv[i].length() + 1; //1 from null terminator
 			}
 			success = child.execute(name, argv); //call the child with argv
@@ -668,12 +672,15 @@ public class UserProcess {
 				//	    		Lib.debug('c', "before readvirtuelmem in write syscall");
 				int amount = readVirtualMemory( a1, buffer, 0, a2);
 				positions[a0] += amount;
-				Lib.debug('c', "exiting write" + PID);
-				return FDs[a0].write(start, buffer, 0, amount);
+				Lib.debug('c', "exiting write " + PID);
+				Lib.debug('c', new String(buffer));
+				int val = FDs[a0].write(buffer, start, amount);
+				return val;
 			} else {
 				return -1;
 			}
 		} catch(Exception e) {
+			Lib.debug('c', e.getMessage());
 			return -1;
 		}
 	}

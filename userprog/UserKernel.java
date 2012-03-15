@@ -68,7 +68,7 @@ public class UserKernel extends ThreadedKernel {
 			// if there are more pages we need to access
 			if (ppnArray.length > 1) {
 				length -= amount;
-				int amountAdded = amount;
+				int amountAdded;
 				for (int i = 1; i < ppnArray.length; i++) {
 					start = (ppnArray[i]*pageSize);
 					// if the last page is not a whole page
