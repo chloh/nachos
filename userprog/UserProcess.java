@@ -26,13 +26,11 @@ public class UserProcess {
 	public UserProcess() {
 		this.childIDs = new Hashtable<Integer,UserProcess>();
 		this.childIDsStatus = new Hashtable<Integer,Integer>();
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		pageTable = new TranslationEntry[numPhysPages];
-		for (int i=0; i<numPhysPages; i++)
-			pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
 		UserKernel.PIDLock.acquire(); // atomic construction
 		PID = totalPID;
+		
 		Lib.debug('c', "Process " + PID + " constructed");
+		
 		totalPID++;
 
 		UserKernel.PIDLock.release();
@@ -98,7 +96,7 @@ public class UserProcess {
 		Lib.debug('c', "restoreState()" + PID);
 		//mutex.acquire();
 		//PState myState = UserKernel.savedPStates.get(PID);
-		Machine.processor().setPageTable(pageTable);
+		//Machine.processor().setPageTable(pageTable);
 		//mutex.release();
 	}
 
@@ -291,10 +289,12 @@ public class UserProcess {
 	 */
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
+		Lib.debug('c', "UserProcess.load(\"" + name + "\")");
 
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
 			Lib.debug(dbgProcess, "\topen failed");
+			Lib.debug('c', "\topen failed");
 			return false;
 		}
 
@@ -304,6 +304,7 @@ public class UserProcess {
 		catch (EOFException e) {
 			executable.close();
 			Lib.debug(dbgProcess, "\tcoff load failed");
+			Lib.debug('c', "\tcoff load failed");
 			return false;
 		}
 
@@ -314,6 +315,7 @@ public class UserProcess {
 			if (section.getFirstVPN() != numPages) {
 				coff.close();
 				Lib.debug(dbgProcess, "\tfragmented executable");
+				Lib.debug('c', "\tfragmented executable");
 				return false;
 			}
 			numPages += section.getLength();
@@ -330,6 +332,7 @@ public class UserProcess {
 		if (argsSize > pageSize) {
 			coff.close();
 			Lib.debug(dbgProcess, "\targuments too long");
+			Lib.debug('c', "\targuments too long");
 			return false;
 		}
 
@@ -342,9 +345,13 @@ public class UserProcess {
 
 		// and finally reserve 1 page for arguments
 		numPages++;
+		
+		Lib.debug('c', "numPages: " + numPages);
 
 		if (!loadSections())
 			return false;
+		
+		Lib.debug('c', "After loadSections");
 
 		// store arguments in last page
 		int entryOffset = (numPages-1)*pageSize;
@@ -380,7 +387,15 @@ public class UserProcess {
 			Lib.debug(dbgProcess, "\tinsufficient physical memory");
 			return false;
 		}
+		pageTable = new TranslationEntry[numPages];
+		int [] pages = ((UserKernel) Kernel.kernel).getMemory(numPages);
+		
+		for (int i = 0; i < pages.length; i++) {
+			pageTable[i] = new TranslationEntry(i, pages[i], true, false, false, false);
+		}
 
+		TranslationEntry pageEntry;
+		int ppn;
 		// load sections
 		for (int s=0; s<coff.getNumSections(); s++) {
 			CoffSection section = coff.getSection(s);
@@ -390,19 +405,22 @@ public class UserProcess {
 
 			for (int i=0; i<section.getLength(); i++) {
 				int vpn = section.getFirstVPN()+i;
-				mutex.acquire();
-				if (UserKernel.pageList.size() == 0)
-					return false;
-				int first = UserKernel.pageList.getFirst();
+				
+				pageEntry = pageTable[vpn];
+				ppn = pageEntry.ppn;
+				section.loadPage(i, ppn);
+
 				if (section.isReadOnly()) {
-					pageTable[vpn] = new TranslationEntry (vpn, first, true, true, false, false);
-				} else { 
-					pageTable[vpn] = new TranslationEntry (vpn, first, true, false, false, false);
+					pageEntry.readOnly = true;
 				}
-				UserKernel.pageList.removeFirst();
-				mutex.release();
+				
+				//if (section.isReadOnly()) {
+					//pageTable[vpn] = new TranslationEntry (vpn, first, true, true, false, false);
+				//} else { 
+					//pageTable[vpn] = new TranslationEntry (vpn, first, true, false, false, false);
+				//}
 				// for now, just assume virtual addresses=physical addresses
-				section.loadPage(i, vpn);
+				//section.loadPage(i, vpn);
 			}
 		}
 
@@ -608,18 +626,22 @@ public class UserProcess {
 			Lib.debug('c', "calling open" + PID);
 			String name = readVirtualMemoryString(a0,256);
 			OpenFile openFile = UserKernel.fileSystem.open(name,false);
+			//OpenFile openFile = ((UserKernel) Kernel.kernel).fileSystem
 			int value = -1;
 			if (openFile == null) {
 				return -1;
 			} else {
+				mutex.acquire();
 				for(int i = 0; i < FDs.length; i++){
 					if (FDs[i] == null) {
 						FDs[i] = openFile;
 						positions[i] = 0;
 						value = i;
+						break;
 					}
 				}
-				Lib.debug('c', "exiting open" + PID);
+				mutex.release();
+				Lib.debug('c', "exiting open " + PID);
 				return value; // value is initially -1, returns if no successful FD, else returns FD
 			}
 		}catch(Exception e) {

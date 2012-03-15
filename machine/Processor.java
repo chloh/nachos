@@ -86,6 +86,7 @@ public final class Processor {
      */
     public void run() {
 	Lib.debug(dbgProcessor, "starting program in current thread");
+	Lib.debug('c', "starting program in current thread");
 
 	registers[regNextPC] = registers[regPC] + 4;
 

@@ -30,7 +30,9 @@ public class UThread extends KThread {
 
 	Machine.processor().run();
 	
+	Lib.debug('c', "before assertNotReached in UThread");
 	Lib.assertNotReached();
+	Lib.debug('c', "after assertNotReached in UThread");
     }
     
     /**
