@@ -108,6 +108,7 @@ public class UserProcess {
 	 */
 	public String readVirtualMemoryString(int vaddr, int maxLength) {
 		Lib.assertTrue(maxLength >= 0);
+		Lib.debug('c', "readVirtualMemoryString");
 
 		byte[] bytes = new byte[maxLength+1];
 
@@ -115,6 +116,7 @@ public class UserProcess {
 
 		for (int length=0; length<bytesRead; length++) {
 			if (bytes[length] == 0)
+				Lib.debug('c', "got this string: "+new String(bytes, 0, length));
 				return new String(bytes, 0, length);
 		}
 
@@ -597,7 +599,7 @@ public class UserProcess {
 	private int handleCreate(int a0){
 		int value = -1;
 		try{ 
-			Lib.debug('c', "calling creat" + PID);
+			Lib.debug('c', "calling creat: PID" + PID);
 			String name = readVirtualMemoryString(a0,256);
 			boolean full = true;
 			for(int i = 0; i < FDs.length;i++){

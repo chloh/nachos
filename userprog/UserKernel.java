@@ -47,6 +47,10 @@ public class UserKernel extends ThreadedKernel {
 	public void freeMemory(int[] pageArray) {
 		for(int i=0; i<pageArray.length; i++){
 			lock.acquire();
+			byte[] memory = Machine.processor().getMemory();
+			for (int j = pageArray[i]*pageSize; j < (pageArray[i]+1)*pageSize; j++) {
+				memory[j] = 0;
+			}
 			// TODO: zero out pages in memory before freeing them
 			pageList.addFirst(pageArray[i]);
 			lock.release();
@@ -54,9 +58,9 @@ public class UserKernel extends ThreadedKernel {
 	}
 
 	public int readPhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {
+		int amount = 0;
 		try {
 			Lib.debug('c', "reading physical memory");
-			int amount = 0;
 			byte[] memory = Machine.processor().getMemory();
 			// determine where to start reading the memory
 			int start = (ppnArray[0] * pageSize) + readOffset;
@@ -89,7 +93,7 @@ public class UserKernel extends ThreadedKernel {
 			return amount;
 		} catch(Exception e) {
 			Lib.debug('c', "exception in readPhysMem: " + e.getMessage());
-			return -1;
+			return amount;
 		}
 	}
 
