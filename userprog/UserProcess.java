@@ -28,9 +28,9 @@ public class UserProcess {
 		this.childIDsStatus = new Hashtable<Integer,Integer>();
 		UserKernel.PIDLock.acquire(); // atomic construction
 		PID = totalPID;
-		
+
 		Lib.debug('c', "Process " + PID + " constructed");
-		
+
 		totalPID++;
 
 		UserKernel.PIDLock.release();
@@ -156,46 +156,29 @@ public class UserProcess {
 			int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 
-		byte[] memory = Machine.processor().getMemory();
-		// this is what we should have done
+		// find vpn, which will give us the ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
-		int vOffset = Processor.offsetFromAddress(vaddr);
-		int tmpLength = length;
-		int pagesToCopy = 0;
-		// read multiple pages?
-		if (tmpLength > pageSize - vOffset) {
-			pagesToCopy++;
-			tmpLength = tmpLength - (pageSize - vOffset);
-		}
-		if (tmpLength > 0)
-			pagesToCopy += Lib.divRoundUp(tmpLength, Processor.pageSize);
-
-		int amount = 0;
-		int dOffset = offset;
-		tmpLength = length;
-		for (int i=0; i<pagesToCopy; i++) {
-			if (pageTable[vpn+i] == null)
-				break;
-			int ppn = pageTable[vpn+i].ppn;
-			int tmpOffset = vOffset;
-			int paddr;
-			if (i==0)
-				paddr = Processor.makeAddress(ppn, vOffset);
-			else {
-				paddr = Processor.makeAddress(ppn, 0);
-				tmpOffset = 0;
+		int ppn = pageTable[vpn].ppn;
+		int readOffset = Processor.offsetFromAddress(vaddr);
+		pageTable[vpn].used = true;
+		// make an array of ppns in case the length of what we’re reading overflows to more than one page
+		int[] ppnArray = new int[length/pageSize + 1];
+		ppnArray[0] = ppn;
+		// if the length of what we’re reading will overflow to the next page:
+		if (length > pageSize - readOffset) {
+			int newvaddr = vaddr;
+			int newVPN = vpn;
+			int i = 1;
+			while (newvaddr < length+vaddr) {
+				// add the other pages we’ll be accessing into the ppnArray
+				newvaddr += pageSize;
+				newVPN = Processor.pageFromAddress(newvaddr);
+				ppnArray[i] = pageTable[newVPN].ppn;
+				pageTable[newVPN].used = true;
+				i++;
 			}
-			if (paddr < 0 || paddr >= memory.length)
-				return 0;
-			int tmpAmount = Math.min(tmpLength, memory.length-paddr);
-			tmpAmount = Math.min(tmpAmount, (Processor.pageSize-tmpOffset));
-			// do the actual transfer
-			System.arraycopy(memory, paddr, data, dOffset, tmpAmount);
-			dOffset += tmpAmount;
-			tmpLength -= tmpAmount;
-			amount += tmpAmount;
 		}
-		return amount;
+		return ((UserKernel) Kernel.kernel).readPhysMem(ppnArray, readOffset, length, data, offset);
 	}
 
 	/**
@@ -228,49 +211,33 @@ public class UserProcess {
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-
-		byte[] memory = Machine.processor().getMemory();
+		// find ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
-		int vOffset = Processor.offsetFromAddress(vaddr);
-		int tmpLength = length;
-		int pagesToCopy = 0;
-		//		if statement checks if it needs to read from multiple pages
-		if (tmpLength > pageSize - vOffset) {
-			pagesToCopy++;
-			tmpLength = tmpLength - (pageSize - vOffset);
-		}
-		//		tmpLength now starts from the beginning of a page, so we can just divide, rounding up
-		if (tmpLength > 0)
-			pagesToCopy += Lib.divRoundUp(tmpLength, Processor.pageSize);
-
-		int amount = 0;
-		int dOffset = offset;
-		tmpLength = length;
-		for (int i=0; i<pagesToCopy; i++) {
-			if (pageTable[vpn+i]==null)
-				break;
-			int ppn = pageTable[vpn+i].ppn;
-			int tmpOffset = vOffset;
-			int paddr;
-			// start from the offset
-			if (i==0)
-				paddr = Processor.makeAddress(ppn, vOffset);
-			// starting from beginning, no offset
-			else {
-				paddr = Processor.makeAddress(ppn, 0);
-				tmpOffset = 0;
+		int ppn = pageTable[vpn].ppn;
+		int writeOffset = Processor.offsetFromAddress(vaddr);
+		pageTable[vpn].used = true;
+		pageTable[vpn].dirty = true;
+		// make an array of ppns in case the length of what we’re
+		// reading overflows to more than one page
+		int[] ppnArray = new int[length/pageSize + 1];
+		ppnArray[0] = ppn;
+		// if the length of what we’re reading will overflow to the next // page
+		if (length > pageSize - writeOffset) {
+			int newvaddr = vaddr;
+			int newVPN = vpn;
+			int i = 1;
+			while (newvaddr < length+vaddr) {
+				// add the other pages we’ll be accessing into the
+				// ppnArray
+				newvaddr += pageSize;
+				newVPN = Processor.pageFromAddress(newvaddr);
+				ppnArray[i] = pageTable[newVPN].ppn;
+				pageTable[newVPN].used = true;
+				pageTable[newVPN].dirty = true;
+				i++;
 			}
-			if (paddr < 0 || paddr >= memory.length)
-				return 0;
-			int tempAmount = Math.min(tmpLength, memory.length-paddr);
-			tempAmount = Math.min(tempAmount, (pageSize-tmpOffset));
-			// perform the actual data transfer
-			System.arraycopy(data, dOffset, memory, paddr, tempAmount);
-			dOffset += tempAmount;
-			tmpLength -= tempAmount;
-			amount += tempAmount;
 		}
-		return amount;
+		return ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
 	}
 
 
@@ -342,12 +309,12 @@ public class UserProcess {
 
 		// and finally reserve 1 page for arguments
 		numPages++;
-		
+
 		Lib.debug('c', "numPages: " + numPages);
 
 		if (!loadSections())
 			return false;
-		
+
 		Lib.debug('c', "After loadSections");
 
 		// store arguments in last page
@@ -386,7 +353,7 @@ public class UserProcess {
 		}
 		pageTable = new TranslationEntry[numPages];
 		int [] pages = ((UserKernel) Kernel.kernel).getMemory(numPages);
-		
+
 		for (int i = 0; i < pages.length; i++) {
 			pageTable[i] = new TranslationEntry(i, pages[i], true, false, false, false);
 		}
@@ -402,7 +369,7 @@ public class UserProcess {
 
 			for (int i=0; i<section.getLength(); i++) {
 				int vpn = section.getFirstVPN()+i;
-				
+
 				pageEntry = pageTable[vpn];
 				ppn = pageEntry.ppn;
 				section.loadPage(i, ppn);
@@ -410,11 +377,11 @@ public class UserProcess {
 				if (section.isReadOnly()) {
 					pageEntry.readOnly = true;
 				}
-				
+
 				//if (section.isReadOnly()) {
-					//pageTable[vpn] = new TranslationEntry (vpn, first, true, true, false, false);
+				//pageTable[vpn] = new TranslationEntry (vpn, first, true, true, false, false);
 				//} else { 
-					//pageTable[vpn] = new TranslationEntry (vpn, first, true, false, false, false);
+				//pageTable[vpn] = new TranslationEntry (vpn, first, true, false, false, false);
 				//}
 				// for now, just assume virtual addresses=physical addresses
 				//section.loadPage(i, vpn);
