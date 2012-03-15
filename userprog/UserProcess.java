@@ -114,10 +114,12 @@ public class UserProcess {
 
 		int bytesRead = readVirtualMemory(vaddr, bytes);
 
+		Lib.debug('c', "bytesRead to get string: "+bytesRead);
 		for (int length=0; length<bytesRead; length++) {
-			if (bytes[length] == 0)
+			if (bytes[length] == 0) {
 				Lib.debug('c', "got this string: "+new String(bytes, 0, length));
 				return new String(bytes, 0, length);
+			}
 		}
 
 		return null;
@@ -601,23 +603,31 @@ public class UserProcess {
 		try{ 
 			Lib.debug('c', "calling creat: PID" + PID);
 			String name = readVirtualMemoryString(a0,256);
+			if (name == null) {
+				return -1;
+			}
 			boolean full = true;
 			for(int i = 0; i < FDs.length;i++){
 				if(FDs[i] == null) {
 					full = false;
+					break;
 				}
 			}
 			if(full){
 				return -1;
 			}
+			Lib.debug('c', "opening file");
+			Lib.debug('c', "name: "+name);
 			OpenFile creatFile = UserKernel.fileSystem.open(name,true);
 			//we can only have 16 files make sure to check before making
 			if (creatFile != null){
+				Lib.debug('c', "creatFile is not null");
 				for(int i = 0; i < FDs.length; i++){
 					if (FDs[i] == null) {
 						FDs[i] = creatFile;
 						positions[i] = 0;
 						value = i;
+						break;
 					}
 				}
 				Lib.debug('c', "exiting creat" + PID);
@@ -626,6 +636,7 @@ public class UserProcess {
 				return -1;
 			}
 		} catch(Exception e) {
+			Lib.debug('c', "exception in creat: " + e.getMessage());
 			return -1;
 		}
 	}
