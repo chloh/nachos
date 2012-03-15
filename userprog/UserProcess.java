@@ -24,16 +24,22 @@ public class UserProcess {
      * Allocate a new process.
      */
     public UserProcess() {
+    this.childIDs = new Hashtable<Integer,UserProcess>();
+    this.childIDsStatus = new Hashtable<Integer,Integer>();
 	int numPhysPages = Machine.processor().getNumPhysPages();
 	pageTable = new TranslationEntry[numPhysPages];
 	for (int i=0; i<numPhysPages; i++)
 	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
 	UserKernel.PIDLock.acquire(); // atomic construction
 	PID = totalPID;
+	Lib.debug('c', "Process " + PID + " constructed");
 	totalPID++;
+	
 	UserKernel.PIDLock.release();
 	FDs[0] = UserKernel.console.openForReading();
+	Lib.debug('c', "after open for reading");
 	FDs[1] = UserKernel.console.openForWriting();
+	Lib.debug('c', "after open for writing");
     }
     
     /**
@@ -56,13 +62,15 @@ public class UserProcess {
      * @return	<tt>true</tt> if the program was successfully executed.
      */
     public boolean execute(String name, String[] args) {
-	if (!load(name, args))
-	    return false;
-	initialThread = new UThread(this);
-	initialThread.setName(name);
-	initialThread.fork();
-	
-	return true;
+		if (!load(name, args))
+		    return false;
+		Lib.debug('c', "before execute" + PID);
+		initialThread = new UThread(this);
+		initialThread.setName(name);
+		initialThread.fork();
+		
+		Lib.debug('c', "new thread forked" + PID);
+		return true;
     }
 
     /**
@@ -70,6 +78,16 @@ public class UserProcess {
      * Called by <tt>UThread.saveState()</tt>.
      */
     public void saveState() {
+    	Lib.debug('c', "saveState()" + PID);
+    	/**mutex.acquire();
+    	UserKernel.savedPStates.put(PID, new PState(coff,pageTable,numPages,initialPC,
+			initialSP, argc, argv, FDs, positions,
+			initialThread, communicator, 
+			childIDs, 
+			childIDsStatus,
+			PID));
+    	mutex.release();**/
+    	
     }
 
     /**
@@ -77,7 +95,11 @@ public class UserProcess {
      * <tt>UThread.restoreState()</tt>.
      */
     public void restoreState() {
-	Machine.processor().setPageTable(pageTable);
+    	Lib.debug('c', "restoreState()" + PID);
+    	//mutex.acquire();
+    	//PState myState = UserKernel.savedPStates.get(PID);
+    	Machine.processor().setPageTable(pageTable);
+		//mutex.release();
     }
 
     /**
@@ -430,6 +452,7 @@ public class UserProcess {
      */
     private int handleExit(int a0){
     	try {
+    		Lib.debug('c', "calling exit" + PID);
 	    	//terminate thread?
 	    	for (int i = 0; i < FDs.length; i++) {
 	    		if (FDs[i] != null) {
@@ -437,7 +460,9 @@ public class UserProcess {
 	    			FDs[i] = null;
 	    		}
 	    	}
+	    	Lib.debug('c', "before unloadSections" + PID);
 	    	unloadSections();
+	    	Lib.debug('c', "after unloadSections" + PID);
 	    	
 	    	/*
 	    	 * for child in childIDs:
@@ -446,16 +471,18 @@ public class UserProcess {
 	    	for (UserProcess child : childIDs.values()){	// disown children
 	    		child.parent = null;
 	    	}
-			
+	    	Lib.debug('c', "after disowning" + PID);
 	    	// tell parent your exit status
 	    	if (parent != null) {
 	    		parent.childIDsStatus.put(this.PID,a0); //a0 is status
 	    	}
-	
-	    	// if I am root
-	    	if (PID == 0) {
+	    	Lib.debug('c', "Check for root process" + PID);
+	    	
+	    	if (PID == 0) { //and if no children are running?
+	    		Lib.debug('c', "last process terminating" + PID);
 	    		Kernel.kernel.terminate();
 	    	}
+	    	Lib.debug('c', "After termination" + PID);
 	    	// what child is this referring to?
 	    	//child.parent = this; 
 	    	return 0;
@@ -469,6 +496,7 @@ public class UserProcess {
      */
     private int handleExec(int a0, int a1, int a2){
     	try {
+    		Lib.debug('c', "calling exec" + PID);
 	    	String name = readVirtualMemoryString(a0,256);
 	    	int start = a2;
 	    	String[] argv = new String[argc];
@@ -489,6 +517,7 @@ public class UserProcess {
 	    	}
 	    	success = child.execute(name, argv); //call the child with argv
 	    	childIDs.put(child.PID, child);
+	    	Lib.debug('c', "exiting exec" + PID);
 	    	return child.PID;
     	} catch(Exception e) {
     		return -1;
@@ -499,6 +528,7 @@ public class UserProcess {
      * Handle the join() system call.
      */
     private int handleJoin(int a0, int a1) {
+    	Lib.debug('c', "calling join" + PID);
     	if (childIDs.containsKey(a0)) { 		
     		UserProcess child = childIDs.get(a0); //check if null
     		child.initialThread.join();
@@ -508,6 +538,7 @@ public class UserProcess {
     		//writeVirtualMemory(a1, childExitStatus);
     		writeVirtualMemory(a1, exitStatus);
     		childIDs.remove(a0);
+    		Lib.debug('c', "exiting join" + PID);
     		return 0;
     	} else {
     		return -1;
@@ -519,6 +550,7 @@ public class UserProcess {
      * Handle the halt() system call. 
      */
     private int handleHalt() {
+    	Lib.debug('c', "calling halt" + PID);
 	    if (PID == 0) {
 	    	Machine.halt();
 	    	return 0;
@@ -536,7 +568,7 @@ public class UserProcess {
     private int handleCreate(int a0){
     	int value = -1;
     	try{ 
-    		
+    		Lib.debug('c', "calling creat" + PID);
     		String name = readVirtualMemoryString(a0,256);
     		boolean full = true;
     		for(int i = 0; i < FDs.length;i++){
@@ -557,6 +589,7 @@ public class UserProcess {
 						value = i;
     				}
     			}
+    			Lib.debug('c', "exiting creat" + PID);
     			return value; // either an index [0,16] or -1
     		} else {
     			return -1;
@@ -572,6 +605,7 @@ public class UserProcess {
      */
     private int handleOpen(int a0){
     	try {
+    		Lib.debug('c', "calling open" + PID);
     		String name = readVirtualMemoryString(a0,256);
     		OpenFile openFile = UserKernel.fileSystem.open(name,false);
     		int value = -1;
@@ -585,6 +619,7 @@ public class UserProcess {
     					value = i;
     				}
     			}
+    			Lib.debug('c', "exiting open" + PID);
     			return value; // value is initially -1, returns if no successful FD, else returns FD
     	    }
     	}catch(Exception e) {
@@ -597,11 +632,13 @@ public class UserProcess {
      */
     private int handleRead(int a0, int a1, int a2){
     	try {
+    		Lib.debug('c', "calling read");
     		if(FDs[a0] != null){
     			byte[] buffer = new byte[a2];
     			int pos = positions[a0];
     			FDs[a0].read(pos, buffer, 0, a2);
     			positions[a0] += a2;
+    			Lib.debug('c', "exiting read" + PID);
     			return writeVirtualMemory(a1,buffer,0,a2); // is size -> a2
     		} else {
     			return -1;
@@ -616,11 +653,14 @@ public class UserProcess {
      */
     private int handleWrite(int a0, int a1, int a2){
     	try{
+    		Lib.debug('c', "calling write" + PID);
 	    	if (FDs[a0] != null) {
 	    		byte[] buffer = new byte[a2];
 	    		int start = positions[a0];
+//	    		Lib.debug('c', "before readvirtuelmem in write syscall");
 	    		int amount = readVirtualMemory( a1, buffer, 0, a2);
 	    		positions[a0] += amount;
+	    		Lib.debug('c', "exiting write" + PID);
 	    		return FDs[a0].write(start, buffer, 0, amount);
 	    	} else {
 	    		return -1;
@@ -635,10 +675,12 @@ public class UserProcess {
      */
     private int handleClose(int a0){
     	try {
+    		Lib.debug('c', "calling close" + PID);
     		if (FDs[a0] != null) {
     			FDs[a0].close();
     			FDs[a0] = null;
     			positions[a0] = 0;
+    			Lib.debug('c', "ending close" + PID);
     			return 0;
     		} else {
     			return -1;
@@ -653,6 +695,7 @@ public class UserProcess {
      */
     private int handleUnlink(int a0){
     	try{
+    		Lib.debug('c', "calling unlink" + PID);
     		String name = readVirtualMemoryString(a0,256);
     		if(UserKernel.fileSystem.remove(name)){
     		//if (StubFileSystem.remove(name)) {
@@ -706,6 +749,7 @@ public class UserProcess {
      * @return	the value to be returned to the user.
      */
     public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
+    	Lib.debug('s', "calling syscall " + syscall);
 	switch (syscall) {
 	case syscallHalt:
 	    return handleHalt();

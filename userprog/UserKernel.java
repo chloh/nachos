@@ -1,5 +1,6 @@
 package nachos.userprog;
 
+import java.util.Hashtable;
 import java.util.LinkedList;
 
 import nachos.machine.*;
@@ -116,7 +117,11 @@ public class UserKernel extends ThreadedKernel {
 	console = new SynchConsole(Machine.console());
 	lock = new Lock();
 	PIDLock = new Lock();
+	savedPStates = new Hashtable<Integer, PState>();
 	
+	
+	
+	Lib.debug('c', "creating the UserKernel");
 	
 	Machine.processor().setExceptionHandler(new Runnable() {
 		public void run() { exceptionHandler(); }
@@ -135,8 +140,11 @@ public class UserKernel extends ThreadedKernel {
 	char c;
 
 	do {
+		Lib.debug('c', "before readByte");
 	    c = (char) console.readByte(true);
+	    Lib.debug('c', "before writeByte");
 	    console.writeByte(c);
+	    Lib.debug('c', "after writeByte");
 	}
 	while (c != 'q');
 
@@ -185,12 +193,15 @@ public class UserKernel extends ThreadedKernel {
      */
     public void run() {
 	super.run();
-
+	
+	Lib.debug('c', "calling run in userkernel");
+	
 	UserProcess process = UserProcess.newUserProcess();
 	
 	String shellProgram = Machine.getShellProgramName();	
+	
 	Lib.assertTrue(process.execute(shellProgram, new String[] { }));
-
+	
 	KThread.currentThread().finish();
     }
 
@@ -212,6 +223,7 @@ public class UserKernel extends ThreadedKernel {
     
     // Adding the PIDLock here
     public static Lock PIDLock;// = new Lock();
+    public static Hashtable<Integer, PState> savedPStates;
     
     private static int pageSize = Machine.processor().pageSize;
 }
