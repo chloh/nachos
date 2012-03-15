@@ -89,19 +89,24 @@ public class UserKernel extends ThreadedKernel {
 		}
 	}
 
-	public int writePhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {
+	public int writePhysMem(int[] ppnArray, int writeOffset, int length, byte[] data, int readOffset) {
 		int amount = 0;
+		// TODO: check that bounds do not exceed memory
 		byte[] memory = Machine.processor().getMemory();
-		// determine where to start reading the memory
+		// determine where to start writing the memory
 		int start = (ppnArray[0] * pageSize) + writeOffset;		
 		int end = (ppnArray[0] + 1) * pageSize;
 		amount = end - start;
-		//check that bounds do not exceed memory
-		System.arraycopy(data, readOffset, memory, start, amount);		
+		if (length <= amount) {
+			System.arraycopy(data, readOffset, memory, start, length);
+			return length;
+		} else {
+			System.arraycopy(data, readOffset, memory, start, amount);
+		}
 		// if there are more pages we need to access
 		if (ppnArray.length > 1) {
 			length -= amount;
-			int amountAdded = amount;
+			int amountAdded;
 			for (int i = 1; i < ppnArray.length; i++) {
 				start = (ppnArray[i]*pageSize);
 				// if the last page is not a whole page

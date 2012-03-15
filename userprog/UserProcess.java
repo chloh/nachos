@@ -215,8 +215,10 @@ public class UserProcess {
 	 */
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
+		// TODO: don't change the pageTable bits until we have successfully written to them
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 		Lib.debug('c', "writing virtualMemory");
+		Lib.debug('c', "how much: "+length);
 		Lib.debug('c', "data we're writing: "+ new String(data));
 		// find ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
@@ -449,6 +451,8 @@ public class UserProcess {
 	// PART III CODE
 	/**
 	 * Handle the exit() system call. 
+	 * C args:
+	 * int status
 	 */
 	private int handleExit(int a0){
 		try {
@@ -496,6 +500,10 @@ public class UserProcess {
 
 	/**
 	 * Handle the exec() system call. 
+	 * C args:
+	 * char* file: pointer to file name
+	 * int argc: number of arguments
+	 * char* argv[]: pointer to an array of arguments
 	 */
 	private int handleExec(int a0, int a1, int a2){
 		try {
@@ -530,11 +538,17 @@ public class UserProcess {
 
 	/**
 	 * Handle the join() system call.
+	 * C args:
+	 * int processID: pid of child to join on
+	 * int* status: pointer to exit status of child
 	 */
 	private int handleJoin(int a0, int a1) {
 		Lib.debug('c', "calling join" + PID);
 		if (childIDs.containsKey(a0)) { 		
 			UserProcess child = childIDs.get(a0); //check if null
+			if (child == null) {
+				return -1;
+			}
 			child.initialThread.join();
 			int childExitStatus = childIDsStatus.get(child.PID);
 			//convert childExitStatus to array of bytes
@@ -568,6 +582,8 @@ public class UserProcess {
 	// PART I CODE
 	/**
 	 * Handle the creat() system call. 
+	 * C args:
+	 * char* name: pointer to name
 	 */
 	private int handleCreate(int a0){
 		int value = -1;
@@ -606,6 +622,8 @@ public class UserProcess {
 
 	/**
 	 * Handle the open() system call. 
+	 * C args:
+	 * char* name: pointer to name
 	 */
 	private int handleOpen(int a0){
 		try {
@@ -637,6 +655,10 @@ public class UserProcess {
 
 	/**
 	 * Handle the read() system call. 
+	 * C args:
+	 * int fileDescriptor
+	 * void* buffer: location to put stuff we read
+	 * int count: how much to read
 	 */
 	private int handleRead(int a0, int a1, int a2){
 		try {
@@ -644,10 +666,12 @@ public class UserProcess {
 			if(FDs[a0] != null){
 				byte[] buffer = new byte[a2];
 				int pos = positions[a0];
-				FDs[a0].read(pos, buffer, 0, a2);
-				positions[a0] += a2;
+				int amount = FDs[a0].read(buffer, 0, a2);
+				//FDs[a0].read(pos, buffer, 0, a2);
+				positions[a0] += amount;
 				Lib.debug('c', "exiting read" + PID);
-				return writeVirtualMemory(a1,buffer,0,a2); // is size -> a2
+				int val = writeVirtualMemory(a1, buffer, 0, a2);
+				return val;
 			} else {
 				return -1;
 			}
@@ -658,6 +682,10 @@ public class UserProcess {
 
 	/**
 	 * Handle the write() system call. 
+	 * C args
+	 * int fileDescriptor
+	 * void* buffer: content to write
+	 * int count: how much to write
 	 */
 	private int handleWrite(int a0, int a1, int a2){
 		try{
@@ -687,6 +715,8 @@ public class UserProcess {
 
 	/**
 	 * Handle the close() system call. 
+	 * C args
+	 * int fileDescriptor
 	 */
 	private int handleClose(int a0){
 		try {
@@ -707,6 +737,8 @@ public class UserProcess {
 
 	/**
 	 * Handle the unlink() system call. 
+	 * C args
+	 * char* name: pointer to name
 	 */
 	private int handleUnlink(int a0){
 		try{
