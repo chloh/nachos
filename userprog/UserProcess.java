@@ -26,18 +26,21 @@ public class UserProcess {
 	public UserProcess() {
 		this.childIDs = new Hashtable<Integer,UserProcess>();
 		this.childIDsStatus = new Hashtable<Integer,Integer>();
-		UserKernel.PIDLock.acquire(); // atomic construction
+		Lib.debug('b', "before acquiring PIDLock");
+		((UserKernel) Kernel.kernel).PIDLock.acquire();
 		PID = totalPID;
-
+		((UserKernel) Kernel.kernel).currentProcesses.add(PID);
 		Lib.debug('c', "Process " + PID + " constructed");
 
 		totalPID++;
 
 		UserKernel.PIDLock.release();
+		
 		FDs[0] = UserKernel.console.openForReading();
 		Lib.debug('c', "after open for reading");
 		FDs[1] = UserKernel.console.openForWriting();
 		Lib.debug('c', "after open for writing");
+		readyToJoin = new Semaphore(0);
 	}
 
 	/**
@@ -64,6 +67,7 @@ public class UserProcess {
 			return false;
 		Lib.debug('c', "before execute" + PID);
 		initialThread = new UThread(this);
+		readyToJoin.V();
 		initialThread.setName(name);
 		initialThread.fork();
 
@@ -77,15 +81,6 @@ public class UserProcess {
 	 */
 	public void saveState() {
 		Lib.debug('c', "saveState()" + PID);
-		/**mutex.acquire();
-    	UserKernel.savedPStates.put(PID, new PState(coff,pageTable,numPages,initialPC,
-			initialSP, argc, argv, FDs, positions,
-			initialThread, communicator, 
-			childIDs, 
-			childIDsStatus,
-			PID));
-    	mutex.release();**/
-
 	}
 
 	/**
@@ -415,13 +410,15 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+		int[] pages = new int[numPages];
 		for (int s=0; s<numPages; s++) {
 			mutex.acquire(); 
 			int ppn = pageTable[s].ppn;
 			pageTable[s] = null;
-			UserKernel.pageList.add(ppn);
+			pages[s] = ppn;
 			mutex.release();                 
 		}
+		((UserKernel) Kernel.kernel).freeMemory(pages);
 	} 
 
 	/**
@@ -459,41 +456,44 @@ public class UserProcess {
 			//if (PID == 0) {
 				//return -1;
 			//}
-			Lib.debug('c', "calling exit" + PID);
+			Lib.debug('b', "calling exit: PID" + PID);
 			//terminate thread?
+			mutex.acquire();
 			for (int i = 0; i < FDs.length; i++) {
 				if (FDs[i] != null) {
 					FDs[i].close();
 					FDs[i] = null;
 				}
 			}
-			Lib.debug('c', "before unloadSections" + PID);
+			mutex.release();
+			
+			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
-			Lib.debug('c', "after unloadSections" + PID);
+			Lib.debug('b', "after unloadSections: PID" + PID);
 
-			/*
-			 * for child in childIDs:
-			 *   childIDs[child] = null
-			 */
-			for (UserProcess child : childIDs.values()){	// disown children
+			// disown children
+			for (UserProcess child : childIDs.values()) {
 				child.parent = null;
 			}
-			Lib.debug('c', "after disowning" + PID);
+			Lib.debug('b', "after disowning: PID" + PID);
+			
 			// tell parent your exit status
 			if (parent != null) {
-				parent.childIDsStatus.put(this.PID,a0); //a0 is status
+				parent.childIDsStatus.put(this.PID, a0); //a0 is status
 			}
-			Lib.debug('c', "Check for root process" + PID);
-
-			if (PID == 0) { //and if no children are running?
-				Lib.debug('c', "last process terminating" + PID);
-				Kernel.kernel.terminate();
+			
+			if (((UserKernel) Kernel.kernel).currentProcesses.remove(PID)) {
+				if (((UserKernel) Kernel.kernel).currentProcesses.isEmpty()) {
+					Lib.debug('b', "last process terminating: PID" + PID);
+					Kernel.kernel.terminate();
+				}
+			} else {
+				Lib.debug('b', "Unable to remove process from currentProcesses");
 			}
-			Lib.debug('c', "After termination" + PID);
-			// what child is this referring to?
-			//child.parent = this; 
+			Lib.debug('b', "After termination: PID" + PID);
 			return 0;
 		} catch (Exception e){
+			Lib.debug('c', "handleExit: "+e.getMessage());
 			return -1;
 		}
 	}
@@ -549,8 +549,17 @@ public class UserProcess {
 			if (child == null) {
 				return -1;
 			}
+			if (child.initialThread == null) {
+				Lib.debug('b', "before ready to join");
+				child.readyToJoin.P();
+			}
+				
+			Lib.debug('b', "joining on child");
 			child.initialThread.join();
+			Lib.debug('b', "my PID: "+PID);
+			Lib.debug('b', "child done");
 			int childExitStatus = childIDsStatus.get(child.PID);
+			Lib.debug('b', "child exit status: "+childExitStatus);
 			//convert childExitStatus to array of bytes
 			byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
 			//writeVirtualMemory(a1, childExitStatus);
@@ -629,8 +638,7 @@ public class UserProcess {
 		try {
 			Lib.debug('c', "calling open" + PID);
 			String name = readVirtualMemoryString(a0,256);
-			OpenFile openFile = UserKernel.fileSystem.open(name,false);
-			//OpenFile openFile = ((UserKernel) Kernel.kernel).fileSystem
+			OpenFile openFile = ((UserKernel) Kernel.kernel).fileSystem.open(name, false);
 			int value = -1;
 			if (openFile == null) {
 				return -1;
@@ -667,6 +675,7 @@ public class UserProcess {
 				byte[] buffer = new byte[a2];
 				int pos = positions[a0];
 				int amount = FDs[a0].read(buffer, 0, a2);
+				Lib.debug('c', "read in: "+new String(buffer));
 				//FDs[a0].read(pos, buffer, 0, a2);
 				positions[a0] += amount;
 				Lib.debug('c', "exiting read" + PID);
@@ -700,15 +709,15 @@ public class UserProcess {
 				//	    		Lib.debug('c', "before readvirtuelmem in write syscall");
 				int amount = readVirtualMemory( a1, buffer, 0, a2);
 				positions[a0] += amount;
-				Lib.debug('c', "exiting write " + PID);
-				Lib.debug('c', new String(buffer));
+				Lib.debug('c', "what's in buffer now: "+new String(buffer));
 				int val = FDs[a0].write(buffer, start, amount);
+				Lib.debug('c', "wrote out how much to FD "+a0+": "+val);
 				return val;
 			} else {
 				return -1;
 			}
 		} catch(Exception e) {
-			Lib.debug('c', e.getMessage());
+			Lib.debug('c', "exception in write: "+e.getMessage());
 			return -1;
 		}
 	}
@@ -800,24 +809,34 @@ public class UserProcess {
 		Lib.debug('c', "calling syscall " + syscall);
 		switch (syscall) {
 		case syscallHalt:
+			//Lib.debug('b', "halt");
 			return handleHalt();
 		case syscallExit:
+			//Lib.debug('b', "exit");
 			return handleExit(a0);
 		case syscallExec:
+			//Lib.debug('b', "exec");
 			return handleExec(a0,a1,a2);
 		case syscallJoin:
+			//Lib.debug('b', "join");
 			return handleJoin(a0,a1);
 		case syscallCreate:
+			//Lib.debug('b', "create");
 			return handleCreate(a0);
 		case syscallOpen:
+			//Lib.debug('b', "open");
 			return handleOpen(a0);
 		case syscallRead:
+			//Lib.debug('b', "read");
 			return handleRead(a0,a1,a2);
 		case syscallWrite:
+			//Lib.debug('b', "write");
 			return handleWrite(a0,a1,a2);
 		case syscallClose:
+			//Lib.debug('b', "close");
 			return handleClose(a0);
 		case syscallUnlink:
+			//Lib.debug('b', "unlink");
 			return handleUnlink(a0);
 		default:
 			Lib.debug(dbgProcess, "Unknown syscall " + syscall);
@@ -845,6 +864,11 @@ public class UserProcess {
 					processor.readRegister(Processor.regA2),
 					processor.readRegister(Processor.regA3)
 			);
+			// if error
+			//if (result == -1) {
+				//handleExit(1);
+				//break;
+			//}
 			processor.writeRegister(Processor.regV0, result);
 			processor.advancePC();
 			break;				       
@@ -852,7 +876,12 @@ public class UserProcess {
 		default:
 			Lib.debug(dbgProcess, "Unexpected exception: " +
 					Processor.exceptionNames[cause]);
-			Lib.assertNotReached("Unexpected exception");
+			Lib.debug('b', "Unexpected exception: " +
+					Processor.exceptionNames[cause]);
+			// modified these based on piazza post @424
+			handleExit(1);
+			break;
+			//Lib.assertNotReached("Unexpected exception");
 		}
 	}
 
@@ -889,4 +918,5 @@ public class UserProcess {
 	private int PID;
 	private static int totalPID;
 	private static Lock mutex = new Lock();
+	public Semaphore readyToJoin;
 }

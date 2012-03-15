@@ -1,5 +1,6 @@
 package nachos.userprog;
 
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
 
@@ -23,6 +24,9 @@ public class UserKernel extends ThreadedKernel {
 		for(int i=0; i<numPhysPages; i++){
 			pageList.add(i);
 		}
+		currentProcesses = new HashSet<Integer>();
+		//PIDLock = new Lock();
+		//lock = new Lock();
 	}
 
 	public int[] getMemory(int numPages) {
@@ -43,7 +47,7 @@ public class UserKernel extends ThreadedKernel {
 	public void freeMemory(int[] pageArray) {
 		for(int i=0; i<pageArray.length; i++){
 			lock.acquire();
-			// zero out pages in memory
+			// TODO: zero out pages in memory before freeing them
 			pageList.addFirst(pageArray[i]);
 			lock.release();
 		}
@@ -84,7 +88,7 @@ public class UserKernel extends ThreadedKernel {
 			}
 			return amount;
 		} catch(Exception e) {
-			Lib.debug('c', e.getMessage());
+			Lib.debug('c', "exception in readPhysMem: " + e.getMessage());
 			return -1;
 		}
 	}
@@ -230,8 +234,8 @@ public class UserKernel extends ThreadedKernel {
 		super.terminate();
 	}
 
-	static LinkedList<Integer> pageList;
-	Lock lock;//= new Lock(); 
+	private LinkedList<Integer> pageList;
+	Lock lock;; 
 
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
@@ -240,8 +244,9 @@ public class UserKernel extends ThreadedKernel {
 	private static Coff dummy1 = null;
 
 	// Adding the PIDLock here
-	public static Lock PIDLock;// = new Lock();
+	public static Lock PIDLock;;
 	//public static Hashtable<Integer, PState> savedPStates;
+	public HashSet<Integer> currentProcesses;
 
 	private static int pageSize = Machine.processor().pageSize;
 }
