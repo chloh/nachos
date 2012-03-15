@@ -26,7 +26,7 @@ public class UserProcess {
 	public UserProcess() {
 		this.childIDs = new Hashtable<Integer,UserProcess>();
 		this.childIDsStatus = new Hashtable<Integer,Integer>();
-		Lib.debug('b', "before acquiring PIDLock");
+		
 		((UserKernel) Kernel.kernel).PIDLock.acquire();
 		PID = totalPID;
 		((UserKernel) Kernel.kernel).currentProcesses.add(PID);
@@ -366,6 +366,7 @@ public class UserProcess {
 			return false;
 		}
 		pageTable = new TranslationEntry[numPages];
+		// TODO: check if the number of pages requested from getMemory is correct
 		int [] pages = ((UserKernel) Kernel.kernel).getMemory(numPages);
 
 		for (int i = 0; i < pages.length; i++) {
@@ -459,6 +460,10 @@ public class UserProcess {
 				//return -1;
 			//}
 			Lib.debug('b', "calling exit: PID" + PID);
+			if (a0 == -1) {
+				parent.childIDsStatus.put(this.PID, a0); //a0 is status
+				return 0;
+			}
 			//terminate thread?
 			for (int i = 0; i < FDs.length; i++) {
 				if (FDs[i] != null) {
@@ -467,9 +472,6 @@ public class UserProcess {
 				}
 			}
 			
-			Lib.debug('b', "before unloadSections: PID" + PID);
-			unloadSections();
-			Lib.debug('b', "after unloadSections: PID" + PID);
 
 			// disown children
 			for (UserProcess child : childIDs.values()) {
@@ -485,12 +487,20 @@ public class UserProcess {
 			if (((UserKernel) Kernel.kernel).currentProcesses.remove(PID)) {
 				if (((UserKernel) Kernel.kernel).currentProcesses.isEmpty()) {
 					Lib.debug('b', "last process terminating: PID" + PID);
+					Lib.debug('b', "before unloadSections: PID" + PID);
+					unloadSections();
+					Lib.debug('b', "after unloadSections: PID" + PID);
 					Kernel.kernel.terminate();
 				}
 			} else {
 				Lib.debug('b', "Unable to remove process from currentProcesses");
 			}
 			Lib.debug('b', "After termination: PID" + PID);
+			Lib.debug('b', "before unloadSections: PID" + PID);
+			unloadSections();
+			Lib.debug('b', "after unloadSections: PID" + PID);
+			
+			UThread.finish();
 			return 0;
 		} catch (Exception e){
 			Lib.debug('c', "handleExit: "+e.getMessage());
@@ -528,6 +538,9 @@ public class UserProcess {
 				start += argv[i].length() + 1; //1 from null terminator
 			}
 			success = child.execute(name, argv); //call the child with argv
+			if (!success) {
+				return -1;
+			}
 			childIDs.put(child.PID, child);
 			Lib.debug('c', "exiting exec" + PID);
 			return child.PID;
@@ -565,7 +578,7 @@ public class UserProcess {
 			//writeVirtualMemory(a1, childExitStatus);
 			writeVirtualMemory(a1, exitStatus);
 			childIDs.remove(a0);
-			Lib.debug('c', "exiting join" + PID);
+			Lib.debug('b', "exiting join" + PID);
 			if (childExitStatus == 0) {
 				return 1;
 			} else {
@@ -767,12 +780,15 @@ public class UserProcess {
 		try{
 			Lib.debug('c', "calling unlink" + PID);
 			String name = readVirtualMemoryString(a0,256);
-			if(UserKernel.fileSystem.remove(name)){
-				//if (StubFileSystem.remove(name)) {
-				return 0;
-			} else {
+			if (name == null) {
 				return -1;
-			} 
+			} else {
+				if(UserKernel.fileSystem.remove(name)){
+					return 0;
+				} else {
+					return -1;
+				} 
+			}
 		} catch(Exception e) {
 			return -1;
 		}		
@@ -893,7 +909,7 @@ public class UserProcess {
 			Lib.debug('b', "Unexpected exception: " +
 					Processor.exceptionNames[cause]);
 			// modified these based on piazza post @424
-			handleExit(1);
+			handleExit(-1);
 			break;
 			//Lib.assertNotReached("Unexpected exception");
 		}
