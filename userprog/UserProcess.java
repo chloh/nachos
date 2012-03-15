@@ -164,18 +164,42 @@ public class UserProcess {
 			Lib.debug('c', "reading length: "+length);
 
 			// find vpn, which will give us the ppn and the offset on the page we’re reading
+			int startVPN = Processor.pageFromAddress(vaddr);
 			int vpn = Processor.pageFromAddress(vaddr);
 			int ppn = pageTable[vpn].ppn;
 			int readOffset = Processor.offsetFromAddress(vaddr);
-			pageTable[vpn].used = true;
+			
+			int newAddr = startVPN*pageSize;
+			int numPages = 0;
+			int currentPage = startVPN;
+			Lib.debug('c', "length: "+length);
+			Lib.debug('c', "pageSize: "+pageSize);
+			Lib.debug('c', "readOffset: "+readOffset);
+			while (newAddr < vaddr+length) {
+				numPages++;
+				newAddr += pageSize;
+				pageTable[currentPage].used = true;
+			}
+			
+			//pageTable[vpn].used = true;
 			// make an array of ppns in case the length of what we’re reading overflows to more than one page
-			int[] ppnArray = new int[length/pageSize + 1];
-			ppnArray[0] = ppn;
-			Lib.debug('c', "here1");
+			int[] ppnArray = new int[numPages];
+			for (int i = 0; i < ppnArray.length; i++) {
+				ppnArray[i] = pageTable[startVPN+i].ppn;
+			}
+			Lib.debug('c', "numPages: "+numPages);
+			Lib.debug('c', "pageTable.size: "+pageTable.length);
+			Lib.debug('c', "ppnArray.size: "+ppnArray.length);
+			//ppnArray[0] = ppn;
+			//Lib.debug('c', "here1");
 			// if the length of what we’re reading will overflow to the next page:
 			// TODO: there was an off by 1 error here.  check writeVirtualMemory to see if there's
 			// one there too.
-			if (length > pageSize - readOffset - 1) {
+			/*
+			Lib.debug('c', "length: "+length);
+			Lib.debug('c', "pageSize: "+pageSize);
+			Lib.debug('c', "readOffset: "+readOffset);
+			if (length > pageSize - readOffset) {
 				int newvaddr = vaddr;
 				int newVPN = vpn;
 				int i = 1;
@@ -188,6 +212,8 @@ public class UserProcess {
 					newVPN = Processor.pageFromAddress(newvaddr);
 					Lib.debug('c', "newVPN: "+newVPN);
 					Lib.debug('c', "pageTable.size: "+pageTable.length);
+					Lib.debug('c', "ppnArray.size: "+ppnArray.length);
+					Lib.debug('c', "i: "+i);
 					ppnArray[i] = pageTable[newVPN].ppn;
 					Lib.debug('c', "c");
 					pageTable[newVPN].used = true;
@@ -195,7 +221,8 @@ public class UserProcess {
 					Lib.debug('c', "here4");
 				}
 			}
-			Lib.debug('c', "here5");
+			*/
+			//Lib.debug('c', "here5");
 			val = ((UserKernel) Kernel.kernel).readPhysMem(ppnArray, readOffset, length, data, offset);
 			Lib.debug('c', "read this much from phys memory: "+val);
 			Lib.debug('c', "in buffer: " + new String(data));
@@ -548,9 +575,13 @@ public class UserProcess {
 			Lib.debug('e', "name: " + name);
 			Lib.debug('e', "num arguments: " + a1);
 
+			byte[] addr = new byte[4];
+			int bytesRead = readVirtualMemory(a2, addr);
+			int startOfArgs = Lib.bytesToInt(addr, 0);
 			boolean success;
 			String str;
 			Lib.debug('e', "Before loop");
+			int currentArg = startOfArgs;
 			for(int i = 0; i < a1; i++){
 				// TODO: this parser is not getting the arguments correctly
 				//These are the arguments to the child process, they can
@@ -562,7 +593,7 @@ public class UserProcess {
 				// why are we not using readVirtualMemoryString here? It finds the null-terminator for us.
 				// readVirtualMemoryString(start, 256)
 				Lib.debug('e', "In loop");
-				str = readVirtualMemoryString(start,256);
+				str = readVirtualMemoryString(currentArg,256);
 				Lib.debug('e', "after reading virtual memory");
 				if (str == null) {
 					argv[i] = "";
@@ -570,7 +601,7 @@ public class UserProcess {
 					argv[i] = str;
 				}
 				Lib.debug('e', "argv["+i+"]: "+ argv[i]);
-				start += argv[i].length() + 1; //1 from null terminator
+				currentArg += argv[i].length() + 1; //1 from null terminator
 			}
 			Lib.debug('e', "After loop");
 			success = child.execute(name, argv); //call the child with argv
