@@ -308,6 +308,8 @@ public final class Processor {
 	// calculate virtual page number and offset from the virtual address
 	int vpn = pageFromAddress(vaddr);
 	int offset = offsetFromAddress(vaddr);
+	Lib.debug('c', "vpn: " + vpn);
+	Lib.debug('c', "offset: " + offset);
 
 	TranslationEntry entry = null;
 
@@ -322,6 +324,7 @@ public final class Processor {
 	    }
 
 	    entry = translations[vpn];
+		Lib.debug('c', "ppn: " + entry.ppn);
 	}
 	// else, look through all TLB entries for matching vpn
 	else {
@@ -611,13 +614,13 @@ public final class Processor {
     private class Instruction {
 	public void run() throws MipsException {
 	    // hopefully this looks familiar to 152 students?
-		Lib.debug('c', "before fetch");
+		//Lib.debug('c', "before fetch");
 	    fetch();
-		Lib.debug('c', "before decode");
+		//Lib.debug('c', "before decode");
 	    decode();
-		Lib.debug('c', "before execute");
+		//Lib.debug('c', "before execute");
 	    execute();
-		Lib.debug('c', "before writeBack");
+		//Lib.debug('c', "before writeBack");
 	    writeBack();
 	}	
 

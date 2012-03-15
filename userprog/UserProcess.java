@@ -287,6 +287,9 @@ public class UserProcess {
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
 		Lib.debug('c', "UserProcess.load(\"" + name + "\")");
+		for (int i = 0; i < args.length; i++) {
+			Lib.debug('c', "UserProcess.load arg "+i+": "+args[i]);
+		}
 
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
@@ -419,6 +422,11 @@ public class UserProcess {
 				// for now, just assume virtual addresses=physical addresses
 				//section.loadPage(i, vpn);
 			}
+		}
+		
+		Lib.debug('c', "Printing Page table!");
+		for (int i = 0; i < pageTable.length; i++) {
+			Lib.debug('c', "vpn: " + i + " ppn: " + pageTable[i].ppn);
 		}
 
 		return true;
