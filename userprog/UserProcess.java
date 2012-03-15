@@ -462,14 +462,12 @@ public class UserProcess {
 			//}
 			Lib.debug('b', "calling exit: PID" + PID);
 			//terminate thread?
-			mutex.acquire();
 			for (int i = 0; i < FDs.length; i++) {
 				if (FDs[i] != null) {
 					FDs[i].close();
 					FDs[i] = null;
 				}
 			}
-			mutex.release();
 			
 			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
@@ -648,15 +646,17 @@ public class UserProcess {
 	 * char* name: pointer to name
 	 */
 	private int handleOpen(int a0){
+		int value = -1;
 		try {
 			Lib.debug('c', "calling open" + PID);
+			if (a0 >= 16 || a0 < 0) {
+				return -1;
+			}
 			String name = readVirtualMemoryString(a0,256);
-			OpenFile openFile = ((UserKernel) Kernel.kernel).fileSystem.open(name, false);
-			int value = -1;
+			OpenFile openFile = UserKernel.fileSystem.open(name, false);
 			if (openFile == null) {
 				return -1;
 			} else {
-				mutex.acquire();
 				for(int i = 0; i < FDs.length; i++){
 					if (FDs[i] == null) {
 						FDs[i] = openFile;
@@ -665,7 +665,6 @@ public class UserProcess {
 						break;
 					}
 				}
-				mutex.release();
 				Lib.debug('c', "exiting open " + PID);
 				return value; // value is initially -1, returns if no successful FD, else returns FD
 			}
