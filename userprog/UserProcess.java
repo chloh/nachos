@@ -70,7 +70,7 @@ public class UserProcess {
 		}
 		Lib.debug('e', "before execute" + PID);
 		initialThread = new UThread(this);
-		readyToJoin.V();
+		//readyToJoin.V();
 		initialThread.setName(name);
 		initialThread.fork();
 
@@ -516,6 +516,7 @@ public class UserProcess {
 			Lib.debug('b', "after unloadSections: PID" + PID);
 
 			UThread.finish();
+			readyToJoin.V();
 			return 0;
 		} catch (Exception e){
 			Lib.debug('c', "handleExit: "+e.getMessage());
@@ -627,16 +628,6 @@ public class UserProcess {
 			 * at one time our child
 			 * 
 			 */
-			} else if(childIDsStatus.contains(a0)){
-				int childPID = a0;
-				int childExitStatus = childIDsStatus.get(childPID);
-				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
-				writeVirtualMemory(a1, exitStatus);
-				if (childExitStatus == 0) {
-					return 1;
-				} else {
-					return 0;
-				}
 			} else {
 				return -1;
 			}
