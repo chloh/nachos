@@ -26,6 +26,7 @@ public class UserProcess {
 	public UserProcess() {
 		this.childIDs = new Hashtable<Integer,UserProcess>();
 		this.childIDsStatus = new Hashtable<Integer,Integer>();
+		this.FDs = new OpenFile[16];
 		
 		((UserKernel) Kernel.kernel).PIDLock.acquire();
 		PID = totalPID;
@@ -638,7 +639,7 @@ public class UserProcess {
 				for(int i = 0; i < FDs.length; i++){
 					if (FDs[i] == null) {
 						FDs[i] = creatFile;
-						positions[i] = 0;
+						//positions[i] = 0;
 						value = i;
 						break;
 					}
@@ -672,7 +673,7 @@ public class UserProcess {
 				for(int i = 0; i < FDs.length; i++){
 					if (FDs[i] == null) {
 						FDs[i] = openFile;
-						positions[i] = 0;
+						//positions[i] = 0;
 						value = i;
 						break;
 					}
@@ -700,11 +701,11 @@ public class UserProcess {
 			}
 			if(FDs[a0] != null){
 				byte[] buffer = new byte[a2];
-				int pos = positions[a0];
+				//int pos = positions[a0];
 				int amount = FDs[a0].read(buffer, 0, a2);
 				Lib.debug('c', "read in: "+new String(buffer));
 				//FDs[a0].read(pos, buffer, 0, a2);
-				positions[a0] += amount;
+				//positions[a0] += amount;
 				Lib.debug('c', "exiting read" + PID);
 				int val = writeVirtualMemory(a1, buffer, 0, amount);
 				return val;
@@ -735,10 +736,10 @@ public class UserProcess {
 			
 			if (FDs[a0] != null) {
 				byte[] buffer = new byte[a2];
-				int start = positions[a0];
+				//int start = positions[a0];
 				//	    		Lib.debug('c', "before readvirtuelmem in write syscall");
 				int amount = readVirtualMemory( a1, buffer, 0, a2);
-				positions[a0] += amount;
+				//positions[a0] += amount;
 				Lib.debug('c', "what's in buffer now: "+new String(buffer));
 				int val = 0;
 				//for (int i = 0; i < amount; i++) {
@@ -766,7 +767,7 @@ public class UserProcess {
 			if (FDs[a0] != null) {
 				FDs[a0].close();
 				FDs[a0] = null;
-				positions[a0] = 0;
+				//positions[a0] = 0;
 				Lib.debug('c', "ending close" + PID);
 				return 0;
 			} else {
@@ -945,12 +946,11 @@ public class UserProcess {
 
 	// Group 33 implementation
 	// For PART I
-	private OpenFile[] FDs = new OpenFile[16];
-	private int[] positions = new int[16];
+	private OpenFile[] FDs;
+	//private int[] positions = new int[16];
 
 	// For PART III
 	UThread initialThread;
-	private Communicator communicator;
 	private UserProcess parent;
 	private Hashtable<Integer, UserProcess> childIDs;
 	private Hashtable<Integer, Integer> childIDsStatus;
@@ -958,6 +958,6 @@ public class UserProcess {
 	//private static Lock lock;
 	private int PID;
 	private static int totalPID;
-	private static Lock mutex = new Lock();
+	//private static Lock mutex = new Lock();
 	public Semaphore readyToJoin;
 }
