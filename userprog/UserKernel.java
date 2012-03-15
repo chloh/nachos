@@ -50,32 +50,43 @@ public class UserKernel extends ThreadedKernel {
 	}
 
 	public int readPhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {
-		int amount = 0;
-		byte[] memory = Machine.processor().getMemory();
-		// determine where to start reading the memory
-		int start = (ppnArray[0] * pageSize) + readOffset;
-		int end = (ppnArray[0] + 1) * pageSize;
-		amount = end - start;
-		//check that bounds do not exceed memory
-		System.arraycopy(memory, start, data, writeOffset, amount);
-		// if there are more pages we need to access
-		if (ppnArray.length > 1) {
-			length -= amount;
-			int amountAdded = amount;
-			for (int i = 1; i < ppnArray.length; i++) {
-				start = (ppnArray[i]*pageSize);
-				// if the last page is not a whole page
-				if (length < pageSize) amountAdded = length;
-				else { 
-					amountAdded = pageSize;
-				}
-				amount += amountAdded;
-				writeOffset += amountAdded;
-				System.arraycopy(memory, start, data, writeOffset, amountAdded);
-				length -= amountAdded;
+		try {
+			Lib.debug('c', "reading physical memory");
+			int amount = 0;
+			byte[] memory = Machine.processor().getMemory();
+			// determine where to start reading the memory
+			int start = (ppnArray[0] * pageSize) + readOffset;
+			int end = (ppnArray[0] + 1) * pageSize;
+			amount = end - start;
+			//check that bounds do not exceed memory
+			if (length <= amount) {
+				System.arraycopy(memory, start, data, writeOffset, length);
+				return length;
+			} else {
+				System.arraycopy(memory, start, data, writeOffset, amount);
 			}
+			// if there are more pages we need to access
+			if (ppnArray.length > 1) {
+				length -= amount;
+				int amountAdded = amount;
+				for (int i = 1; i < ppnArray.length; i++) {
+					start = (ppnArray[i]*pageSize);
+					// if the last page is not a whole page
+					if (length < pageSize) amountAdded = length;
+					else { 
+						amountAdded = pageSize;
+					}
+					amount += amountAdded;
+					writeOffset += amountAdded;
+					System.arraycopy(memory, start, data, writeOffset, amountAdded);
+					length -= amountAdded;
+				}
+			}
+			return amount;
+		} catch(Exception e) {
+			Lib.debug('c', e.getMessage());
+			return -1;
 		}
-		return amount;
 	}
 
 	public int writePhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {

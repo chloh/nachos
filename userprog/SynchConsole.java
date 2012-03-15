@@ -117,6 +117,7 @@ public class SynchConsole {
 	}
 
 	public int read(byte[] buf, int offset, int length) {
+		Lib.debug('c', "reading from stdin");
 	    if (!canRead)
 		return 0;
 
@@ -133,6 +134,7 @@ public class SynchConsole {
 	}
 
 	public int write(byte[] buf, int offset, int length) {
+		Lib.debug('c', "writing to stdout");
 	    if (!canWrite)
 		return 0;
 	    

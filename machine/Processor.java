@@ -308,8 +308,8 @@ public final class Processor {
 	// calculate virtual page number and offset from the virtual address
 	int vpn = pageFromAddress(vaddr);
 	int offset = offsetFromAddress(vaddr);
-	Lib.debug('c', "vpn: " + vpn);
-	Lib.debug('c', "offset: " + offset);
+	//Lib.debug('c', "vpn: " + vpn);
+	//Lib.debug('c', "offset: " + offset);
 
 	TranslationEntry entry = null;
 
@@ -324,7 +324,7 @@ public final class Processor {
 	    }
 
 	    entry = translations[vpn];
-		Lib.debug('c', "ppn: " + entry.ppn);
+		//Lib.debug('c', "ppn: " + entry.ppn);
 	}
 	// else, look through all TLB entries for matching vpn
 	else {
@@ -634,9 +634,9 @@ public final class Processor {
 		System.out.print("PC=0x" + Lib.toHexString(registers[regPC])
 				 + "\t");
 
-	    Lib.debug('c', "before readMem");
+	    //Lib.debug('c', "before readMem");
 	    value = readMem(registers[regPC], 4);
-	    Lib.debug('c', "after readMem");
+	    //Lib.debug('c', "after readMem");
 	}
 	
 	private void decode() {

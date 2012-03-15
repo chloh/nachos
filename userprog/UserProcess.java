@@ -155,6 +155,9 @@ public class UserProcess {
 	public int readVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+		Lib.debug('c', "reading virtualMemory");
+		Lib.debug('c', "reading length: "+length);
+		Lib.debug('c', new String(data));
 
 		// find vpn, which will give us the ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
@@ -178,7 +181,10 @@ public class UserProcess {
 				i++;
 			}
 		}
-		return ((UserKernel) Kernel.kernel).readPhysMem(ppnArray, readOffset, length, data, offset);
+		int val = ((UserKernel) Kernel.kernel).readPhysMem(ppnArray, readOffset, length, data, offset);
+		Lib.debug('c', "read this much from phys memory: "+val);
+		Lib.debug('c', new String(data));
+		return val;
 	}
 
 	/**
@@ -211,6 +217,7 @@ public class UserProcess {
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+		Lib.debug('c', "writing virtualMemory");
 		// find ppn and the offset on the page we’re reading
 		int vpn = Processor.pageFromAddress(vaddr);
 		int ppn = pageTable[vpn].ppn;
@@ -442,6 +449,9 @@ public class UserProcess {
 	 */
 	private int handleExit(int a0){
 		try {
+			if (PID == 0) {
+				return -1;
+			}
 			Lib.debug('c', "calling exit" + PID);
 			//terminate thread?
 			for (int i = 0; i < FDs.length; i++) {
@@ -647,7 +657,11 @@ public class UserProcess {
 	 */
 	private int handleWrite(int a0, int a1, int a2){
 		try{
-			Lib.debug('c', "calling write" + PID);
+			Lib.debug('c', "calling write " + PID);
+			Lib.debug('c', "fd: " + a0);
+			Lib.debug('c', "vaddr: " + a1);
+			Lib.debug('c', "size: " + a2);
+			
 			if (FDs[a0] != null) {
 				byte[] buffer = new byte[a2];
 				int start = positions[a0];
@@ -743,7 +757,8 @@ public class UserProcess {
 	 * @return	the value to be returned to the user.
 	 */
 	public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
-		Lib.debug('s', "calling syscall " + syscall);
+		//Lib.debug('s', "calling syscall " + syscall);
+		Lib.debug('c', "calling syscall " + syscall);
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
