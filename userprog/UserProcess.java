@@ -416,11 +416,9 @@ public class UserProcess {
 	protected void unloadSections() {
 		int[] pages = new int[numPages];
 		for (int s=0; s<numPages; s++) {
-			mutex.acquire(); 
 			int ppn = pageTable[s].ppn;
 			pageTable[s] = null;
 			pages[s] = ppn;
-			mutex.release();                 
 		}
 		((UserKernel) Kernel.kernel).freeMemory(pages);
 	} 
@@ -895,6 +893,11 @@ public class UserProcess {
 			break;
 			//Lib.assertNotReached("Unexpected exception");
 		}
+	}
+	
+	// TODO: fill this in and use it where ever we use virtual addresses
+	boolean validAddress(int vaddr) {
+		return false;
 	}
 
 	/** The program being run by this process. */
