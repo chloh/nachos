@@ -27,7 +27,7 @@ public class UserProcess {
 		this.childIDs = new Hashtable<Integer,UserProcess>();
 		this.childIDsStatus = new Hashtable<Integer,Integer>();
 		this.FDs = new OpenFile[16];
-		
+
 		((UserKernel) Kernel.kernel).PIDLock.acquire();
 		PID = totalPID;
 		((UserKernel) Kernel.kernel).currentProcesses.add(PID);
@@ -36,7 +36,7 @@ public class UserProcess {
 		totalPID++;
 
 		UserKernel.PIDLock.release();
-		
+
 		FDs[0] = UserKernel.console.openForReading();
 		Lib.debug('c', "after open for reading");
 		FDs[1] = UserKernel.console.openForWriting();
@@ -64,15 +64,17 @@ public class UserProcess {
 	 * @return	<tt>true</tt> if the program was successfully executed.
 	 */
 	public boolean execute(String name, String[] args) {
-		if (!load(name, args))
+		if (!load(name, args)) {
+			Lib.debug('e', "loading failed");
 			return false;
-		Lib.debug('c', "before execute" + PID);
+		}
+		Lib.debug('e', "before execute" + PID);
 		initialThread = new UThread(this);
 		readyToJoin.V();
 		initialThread.setName(name);
 		initialThread.fork();
 
-		Lib.debug('c', "new thread forked" + PID);
+		Lib.debug('e', "new thread forked" + PID);
 		return true;
 	}
 
@@ -264,16 +266,16 @@ public class UserProcess {
 	 */
 	private boolean load(String name, String[] args) {
 		Lib.debug(dbgProcess, "UserProcess.load(\"" + name + "\")");
-		Lib.debug('c', "UserProcess.load(\"" + name + "\")");
-		Lib.debug('c', "UserProcess.load num args " + args.length);
+		Lib.debug('e', "UserProcess.load(\"" + name + "\")");
+		Lib.debug('e', "UserProcess.load num args " + args.length);
 		for (int i = 0; i < args.length; i++) {
-			Lib.debug('c', "UserProcess.load arg "+i+": "+args[i]);
+			Lib.debug('e', "UserProcess.load arg "+i+": "+args[i]);
 		}
 
 		OpenFile executable = ThreadedKernel.fileSystem.open(name, false);
 		if (executable == null) {
 			Lib.debug(dbgProcess, "\topen failed");
-			Lib.debug('c', "\topen failed");
+			Lib.debug('e', "\topen failed");
 			return false;
 		}
 
@@ -283,7 +285,7 @@ public class UserProcess {
 		catch (EOFException e) {
 			executable.close();
 			Lib.debug(dbgProcess, "\tcoff load failed");
-			Lib.debug('c', "\tcoff load failed");
+			Lib.debug('e', "\tcoff load failed");
 			return false;
 		}
 
@@ -311,7 +313,7 @@ public class UserProcess {
 		if (argsSize > pageSize) {
 			coff.close();
 			Lib.debug(dbgProcess, "\targuments too long");
-			Lib.debug('c', "\targuments too long");
+			Lib.debug('e', "\targuments too long");
 			return false;
 		}
 
@@ -330,7 +332,7 @@ public class UserProcess {
 		if (!loadSections())
 			return false;
 
-		Lib.debug('c', "After loadSections");
+		Lib.debug('e', "After loadSections");
 
 		// store arguments in last page
 		int entryOffset = (numPages-1)*pageSize;
@@ -403,7 +405,7 @@ public class UserProcess {
 				//section.loadPage(i, vpn);
 			}
 		}
-		
+
 		Lib.debug('c', "Printing Page table!");
 		for (int i = 0; i < pageTable.length; i++) {
 			Lib.debug('c', "vpn: " + i + " ppn: " + pageTable[i].ppn);
@@ -458,7 +460,7 @@ public class UserProcess {
 	private int handleExit(int a0){
 		try {
 			//if (PID == 0) {
-				//return -1;
+			//return -1;
 			//}
 			Lib.debug('b', "calling exit: PID" + PID);
 			if (a0 == -1) {
@@ -472,19 +474,19 @@ public class UserProcess {
 					FDs[i] = null;
 				}
 			}
-			
+
 
 			// disown children
 			for (UserProcess child : childIDs.values()) {
 				child.parent = null;
 			}
 			Lib.debug('b', "after disowning: PID" + PID);
-			
+
 			// tell parent your exit status
 			if (parent != null) {
 				parent.childIDsStatus.put(this.PID, a0); //a0 is status
 			}
-			
+
 			if (((UserKernel) Kernel.kernel).currentProcesses.remove(PID)) {
 				if (((UserKernel) Kernel.kernel).currentProcesses.isEmpty()) {
 					Lib.debug('b', "last process terminating: PID" + PID);
@@ -500,7 +502,7 @@ public class UserProcess {
 			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
 			Lib.debug('b', "after unloadSections: PID" + PID);
-			
+
 			UThread.finish();
 			return 0;
 		} catch (Exception e){
@@ -518,14 +520,19 @@ public class UserProcess {
 	 */
 	private int handleExec(int a0, int a1, int a2){
 		try {
-			Lib.debug('c', "calling exec" + PID);
+			Lib.debug('e', "calling exec" + PID);
 			String name = readVirtualMemoryString(a0,256);
 			int start = a2;
-			String[] argv = new String[argc];
+			String[] argv = new String[a1];
 			UserProcess child = new UserProcess();
 			child.parent = this;
+			Lib.debug('e', "name: " + name);
+			Lib.debug('e', "num arguments: " + a1);
+			
 			boolean success;
-			for(int i = 0; i < argc; i++){
+			String str;
+			Lib.debug('e', "Before loop");
+			for(int i = 0; i < a1; i++){
 				//These are the arguments to the child process, they can
 				//be arbitrarily long so for each argv[i] we need to loop
 				//in the memory from the start position until we reach a 
@@ -534,16 +541,24 @@ public class UserProcess {
 				//place
 				// why are we not using readVirtualMemoryString here? It finds the null-terminator for us.
 				// readVirtualMemoryString(start, 256)
-				argv[i] = readVirtualMemoryString(start,256);
-				Lib.debug('c', "argv["+i+"]: "+ argv[i]);
+				Lib.debug('e', "In loop");
+				str = readVirtualMemoryString(start,256);
+				Lib.debug('e', "after reading virtual memory");
+				if (str == null) {
+					argv[i] = "";
+				} else {
+					argv[i] = str;
+				}
+				Lib.debug('e', "argv["+i+"]: "+ argv[i]);
 				start += argv[i].length() + 1; //1 from null terminator
 			}
+			Lib.debug('e', "After loop");
 			success = child.execute(name, argv); //call the child with argv
 			if (!success) {
 				return -1;
 			}
 			childIDs.put(child.PID, child);
-			Lib.debug('c', "exiting exec" + PID);
+			Lib.debug('e', "exiting exec" + PID);
 			return child.PID;
 		} catch(Exception e) {
 			return -1;
@@ -558,34 +573,40 @@ public class UserProcess {
 	 */
 	private int handleJoin(int a0, int a1) {
 		Lib.debug('j', "calling join" + PID);
-		if (childIDs.containsKey(a0)) { 		
-			UserProcess child = childIDs.get(a0); //check if null
-			if (child == null) {
+		try {
+			Lib.debug('j', "status: "+a1);
+			if (childIDs.containsKey(a0)) { 		
+				UserProcess child = childIDs.get(a0); //check if null
+				if (child == null) {
+					return -1;
+				}
+				if (child.initialThread == null) {
+					Lib.debug('j', "before ready to join");
+					child.readyToJoin.P();
+				}
+
+				Lib.debug('j', "joining on child");
+				child.initialThread.join();
+				Lib.debug('j', "my PID: "+PID);
+				Lib.debug('j', "child done");
+				int childExitStatus = childIDsStatus.get(child.PID);
+				Lib.debug('j', "child exit status: "+childExitStatus);
+				//convert childExitStatus to array of bytes
+				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
+				//writeVirtualMemory(a1, childExitStatus);
+				writeVirtualMemory(a1, exitStatus);
+				childIDs.remove(a0);
+				Lib.debug('j', "exiting join" + PID);
+				if (childExitStatus == 0) {
+					return 1;
+				} else {
+					return 0;
+				}
+			} else {
 				return -1;
 			}
-			if (child.initialThread == null) {
-				Lib.debug('j', "before ready to join");
-				child.readyToJoin.P();
-			}
-				
-			Lib.debug('j', "joining on child");
-			child.initialThread.join();
-			Lib.debug('j', "my PID: "+PID);
-			Lib.debug('j', "child done");
-			int childExitStatus = childIDsStatus.get(child.PID);
-			Lib.debug('j', "child exit status: "+childExitStatus);
-			//convert childExitStatus to array of bytes
-			byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
-			//writeVirtualMemory(a1, childExitStatus);
-			writeVirtualMemory(a1, exitStatus);
-			childIDs.remove(a0);
-			Lib.debug('j', "exiting join" + PID);
-			if (childExitStatus == 0) {
-				return 1;
-			} else {
-				return 0;
-			}
-		} else {
+		} catch (Exception e) {
+			Lib.debug('j', "join error: "+e.getMessage());
 			return -1;
 		}
 	}
@@ -733,7 +754,7 @@ public class UserProcess {
 			Lib.debug('c', "fd: " + a0);
 			Lib.debug('c', "vaddr: " + a1);
 			Lib.debug('c', "size: " + a2);
-			
+
 			if (FDs[a0] != null) {
 				byte[] buffer = new byte[a2];
 				//int start = positions[a0];
@@ -903,8 +924,8 @@ public class UserProcess {
 			);
 			// if error
 			//if (result == -1) {
-				//handleExit(1);
-				//break;
+			//handleExit(1);
+			//break;
 			//}
 			processor.writeRegister(Processor.regV0, result);
 			processor.advancePC();
@@ -922,7 +943,7 @@ public class UserProcess {
 			//Lib.assertNotReached("Unexpected exception");
 		}
 	}
-	
+
 	// TODO: fill this in and use it where ever we use virtual addresses
 	boolean validAddress(int vaddr) {
 		return false;

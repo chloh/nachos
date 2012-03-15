@@ -43,7 +43,6 @@ public class UserKernel extends ThreadedKernel {
 			for (int j = pageArray[i]*pageSize; j < (pageArray[i]+1)*pageSize; j++) {
 				memory[j] = 0;
 			}
-			// TODO: zero out pages in memory before freeing them
 			pageList.addFirst(pageArray[i]);
 			lock.release();
 		}
