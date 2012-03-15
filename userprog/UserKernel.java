@@ -91,36 +91,42 @@ public class UserKernel extends ThreadedKernel {
 
 	public int writePhysMem(int[] ppnArray, int writeOffset, int length, byte[] data, int readOffset) {
 		int amount = 0;
-		// TODO: check that bounds do not exceed memory
-		byte[] memory = Machine.processor().getMemory();
-		// determine where to start writing the memory
-		int start = (ppnArray[0] * pageSize) + writeOffset;		
-		int end = (ppnArray[0] + 1) * pageSize;
-		amount = end - start;
-		if (length <= amount) {
-			System.arraycopy(data, readOffset, memory, start, length);
-			return length;
-		} else {
-			System.arraycopy(data, readOffset, memory, start, amount);
-		}
-		// if there are more pages we need to access
-		if (ppnArray.length > 1) {
-			length -= amount;
-			int amountAdded;
-			for (int i = 1; i < ppnArray.length; i++) {
-				start = (ppnArray[i]*pageSize);
-				// if the last page is not a whole page
-				if (length < pageSize) amountAdded = length;
-				else { 
-					amountAdded = pageSize;
-				}
-				amount += amountAdded;
-				writeOffset += amountAdded;
-				System.arraycopy(data, readOffset, memory, start, amountAdded);				
-				length -= amountAdded;
+		try {
+			// TODO: check that bounds do not exceed memory
+			byte[] memory = Machine.processor().getMemory();
+			
+			// determine where to start writing the memory
+			int start = (ppnArray[0] * pageSize) + writeOffset;		
+			int end = (ppnArray[0] + 1) * pageSize;
+			amount = end - start;
+			if (length <= amount) {
+				System.arraycopy(data, readOffset, memory, start, length);
+				return length;
+			} else {
+				System.arraycopy(data, readOffset, memory, start, amount);
 			}
+			// if there are more pages we need to access
+			if (ppnArray.length > 1) {
+				length -= amount;
+				int amountAdded;
+				for (int i = 1; i < ppnArray.length; i++) {
+					start = (ppnArray[i]*pageSize);
+					// if the last page is not a whole page
+					if (length < pageSize) amountAdded = length;
+					else { 
+						amountAdded = pageSize;
+					}
+					amount += amountAdded;
+					writeOffset += amountAdded;
+					System.arraycopy(data, readOffset, memory, start, amountAdded);				
+					length -= amountAdded;
+				}
+			}
+			return amount;
+		} catch(Exception e) {
+			Lib.debug('c', "writePhyMem had an exception: "+e.getMessage());
+			return amount;
 		}
-		return amount;
 	}
 
 	/**

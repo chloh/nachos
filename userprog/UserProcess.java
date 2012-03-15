@@ -557,29 +557,29 @@ public class UserProcess {
 	 * int* status: pointer to exit status of child
 	 */
 	private int handleJoin(int a0, int a1) {
-		Lib.debug('c', "calling join" + PID);
+		Lib.debug('j', "calling join" + PID);
 		if (childIDs.containsKey(a0)) { 		
 			UserProcess child = childIDs.get(a0); //check if null
 			if (child == null) {
 				return -1;
 			}
 			if (child.initialThread == null) {
-				Lib.debug('b', "before ready to join");
+				Lib.debug('j', "before ready to join");
 				child.readyToJoin.P();
 			}
 				
-			Lib.debug('b', "joining on child");
+			Lib.debug('j', "joining on child");
 			child.initialThread.join();
-			Lib.debug('b', "my PID: "+PID);
-			Lib.debug('b', "child done");
+			Lib.debug('j', "my PID: "+PID);
+			Lib.debug('j', "child done");
 			int childExitStatus = childIDsStatus.get(child.PID);
-			Lib.debug('b', "child exit status: "+childExitStatus);
+			Lib.debug('j', "child exit status: "+childExitStatus);
 			//convert childExitStatus to array of bytes
 			byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
 			//writeVirtualMemory(a1, childExitStatus);
 			writeVirtualMemory(a1, exitStatus);
 			childIDs.remove(a0);
-			Lib.debug('b', "exiting join" + PID);
+			Lib.debug('j', "exiting join" + PID);
 			if (childExitStatus == 0) {
 				return 1;
 			} else {
@@ -915,6 +915,7 @@ public class UserProcess {
 					Processor.exceptionNames[cause]);
 			Lib.debug('b', "Unexpected exception: " +
 					Processor.exceptionNames[cause]);
+			// TODO: fix this.  not really sure what it should do
 			// modified these based on piazza post @424
 			handleExit(-1);
 			break;

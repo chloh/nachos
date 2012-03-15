@@ -17,6 +17,12 @@ int main(int agrc, char *argv[]) {
   int fd6 = open(cp);
   int fd7 = open(cp);
   int fd8 = open(cp);
+
+  char* prgm = "test_super_open.coff";
+  int num_args = 0;
+  char** arg_val;
+  int success = exec(prgm, num_args, arg_val);
+  printf("success: %d\n", success);
   int fd9 = open(cp);
   int fd10 = open(cp);
   int fd11 = open(cp);
