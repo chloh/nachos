@@ -49,6 +49,45 @@ public class LotteryScheduler extends PriorityScheduler {
 		return (LotteryThreadState) thread.schedulingState;
 	}
     
+    public void setPriority(KThread thread, int priority) {
+		Lib.assertTrue(Machine.interrupt().disabled());
+
+		Lib.assertTrue(priority >= priorityMinimum &&
+				priority <= priorityMaximum);
+
+		getThreadState(thread).setPriority(priority);
+	}
+
+	public boolean increasePriority() {
+		boolean intStatus = Machine.interrupt().disable();
+
+		KThread thread = KThread.currentThread();
+
+		int priority = getPriority(thread);
+		if (priority == priorityMaximum)
+			return false;
+
+		setPriority(thread, priority+1);
+
+		Machine.interrupt().restore(intStatus);
+		return true;
+	}
+
+	public boolean decreasePriority() {
+		boolean intStatus = Machine.interrupt().disable();
+
+		KThread thread = KThread.currentThread();
+
+		int priority = getPriority(thread);
+		if (priority == priorityMinimum)
+			return false;
+
+		setPriority(thread, priority-1);
+
+		Machine.interrupt().restore(intStatus);
+		return true;
+	}
+    
     /**
      * Allocate a new lottery thread queue.
      *
@@ -78,6 +117,7 @@ public class LotteryScheduler extends PriorityScheduler {
 
 		public LotteryThreadState(KThread thread) {
 			super(thread);
+			Lib.debug('t', "before setPriority");
 			setPriority(priorityDefault);
 		}
 
@@ -98,6 +138,35 @@ public class LotteryScheduler extends PriorityScheduler {
 				if (waitForAccessQueue.resourceHolder() != null) {
 					((LotteryThreadState) waitForAccessQueue.resourceHolder()).updateEffectivePriority(this.waitForAccessQueue);
 				}
+			}
+		}
+		
+		@Override
+		public void setPriority(int priority) {
+			Lib.debug('t', "Setting new priority from " + this.priority + " to " + priority);
+			if (this.priority == priority)
+				return;
+			
+			this.priority = priority;
+			
+			if (waitForAccessQueue == null) {
+				this.effectivePriority = priority;
+			} 
+			
+			//Now we need to update current thread state's priority
+			if(!this.resourcePriorities.isEmpty()) {
+				Lib.debug('t', "This thread has resourcePriorities");
+				PriorityQueue resourceQueue = this.resourcePriorities.keys().nextElement();
+				if (resourceQueue.transferPriority) {
+					this.updateEffectivePriority(resourceQueue);
+				}
+			}
+
+			if(this.waitForAccessQueue != null){
+				Lib.debug('t', "This thread is in a waitForAccessQueue");
+			    if(this.waitForAccessQueue.transferPriority){
+			        this.waitForAccessQueue.resourceHolder().updateEffectivePriority(this.waitForAccessQueue);
+			    }
 			}
 		}
 		
