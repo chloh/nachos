@@ -607,7 +607,7 @@ public class UserProcess {
 				child.readyToJoin.P();
 
 				Lib.debug('j', "joining on child");
-				child.initialThread.join();
+				//child.initialThread.join();
 				Lib.debug('j', "my PID: "+PID);
 				Lib.debug('j', "child done");
 				int childExitStatus = childIDsStatus.get(child.PID);
