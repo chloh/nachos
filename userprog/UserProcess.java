@@ -513,6 +513,7 @@ public class UserProcess {
 			Lib.debug('b', "After termination: PID" + PID);
 			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
+			coff.close(); // see piazza @438
 			Lib.debug('b', "after unloadSections: PID" + PID);
 			readyToJoin.V();
 			UThread.finish();
@@ -813,6 +814,10 @@ public class UserProcess {
 	private int handleClose(int a0){
 		try {
 			Lib.debug('c', "calling close" + PID);
+			// added bullet proofing
+			if(a0 >= 16 || a0 < 0){
+				return -1;
+			}
 			if (FDs[a0] != null) {
 				FDs[a0].close();
 				FDs[a0] = null;
