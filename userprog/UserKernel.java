@@ -19,14 +19,6 @@ public class UserKernel extends ThreadedKernel {
 
 	public UserKernel() {
 		super();
-		pageList = new LinkedList<Integer>();
-		int numPhysPages = Machine.processor().getNumPhysPages();
-		for(int i=0; i<numPhysPages; i++){
-			pageList.add(i);
-		}
-		currentProcesses = new HashSet<Integer>();
-		//PIDLock = new Lock();
-		//lock = new Lock();
 	}
 
 	public int[] getMemory(int numPages) {
@@ -141,6 +133,12 @@ public class UserKernel extends ThreadedKernel {
 		console = new SynchConsole(Machine.console());
 		lock = new Lock();
 		PIDLock = new Lock();
+		pageList = new LinkedList<Integer>();
+		int numPhysPages = Machine.processor().getNumPhysPages();
+		for(int i=0; i<numPhysPages; i++){
+			pageList.add(i);
+		}
+		currentProcesses = new HashSet<Integer>();
 		//savedPStates = new Hashtable<Integer, PState>();
 
 
@@ -239,7 +237,7 @@ public class UserKernel extends ThreadedKernel {
 	}
 
 	private LinkedList<Integer> pageList;
-	Lock lock;; 
+	Lock lock; 
 
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
