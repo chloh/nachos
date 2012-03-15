@@ -513,7 +513,7 @@ public class UserProcess {
 			Lib.debug('b', "After termination: PID" + PID);
 			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
-			coff.close(); // see piazza @438
+			coff.close(); 
 			Lib.debug('b', "after unloadSections: PID" + PID);
 			readyToJoin.V();
 			UThread.finish();
@@ -618,7 +618,7 @@ public class UserProcess {
 				writeVirtualMemory(a1, exitStatus);
 				childIDs.remove(a0);
 				Lib.debug('j', "exiting join" + PID);
-				if (childExitStatus == 0) {
+				if (childExitStatus == 1) {
 					return 1;
 				} else {
 					return 0;
