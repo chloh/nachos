@@ -154,21 +154,21 @@ public class UserKernel extends ThreadedKernel {
 	 * Test the console device.
 	 */	
 	public void selfTest() {
-		//super.selfTest();
+		super.selfTest();
 
-		//System.out.println("Testing the console device. Typed characters");
-		//System.out.println("will be echoed until q is typed.");
+		System.out.println("Testing the console device. Typed characters");
+		System.out.println("will be echoed until q is typed.");
 
-		//char c;
+		char c;
 
-		//do {
-			//Lib.debug('c', "before readByte");
-			//c = (char) console.readByte(true);
-			//Lib.debug('c', "before writeByte");
-			//console.writeByte(c);
-			//Lib.debug('c', "after writeByte");
-		//}
-		//while (c != 'q');
+		do {
+			Lib.debug('c', "before readByte");
+			c = (char) console.readByte(true);
+			Lib.debug('c', "before writeByte");
+			console.writeByte(c);
+			Lib.debug('c', "after writeByte");
+		}
+		while (c != 'q');
 
 		System.out.println("");
 	}
