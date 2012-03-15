@@ -614,29 +614,21 @@ public class UserProcess {
 				Lib.debug('j', "child exit status: "+childExitStatus);
 				//convert childExitStatus to array of bytes
 				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
-				//writeVirtualMemory(a1, childExitStatus);
+				//writeVirtuajlMemory(a1, childExitStatus);
 				writeVirtualMemory(a1, exitStatus);
 				childIDs.remove(a0);
-				Lib.debug('j', "exiting join" + PID);
+				Lib.debug('j', "exiting join: " + PID);
 				if (childExitStatus == 0) {
 					return 1;
 				} else {
 					return 0;
 				}
-			/*
-			 * childIDs keeps track of active proccesses
-			 * if the child already exited, it'd be removed form childIDs
-			 * and would error if we tried to join on it again
-			 * this extra branch just checks if it's inactive, but was
-			 * at one time our child
-			 * 
-			 */
 			} else {
 				return -1;
 			}
 		} catch (Exception e) {
-			Lib.debug('j', "join error: "+e.getMessage());
-			return 0;
+			Lib.debug('j', "join error: " + e.getMessage());
+			return -1;
 		}
 	}
 
