@@ -611,9 +611,13 @@ public final class Processor {
     private class Instruction {
 	public void run() throws MipsException {
 	    // hopefully this looks familiar to 152 students?
+		Lib.debug('c', "before fetch");
 	    fetch();
+		Lib.debug('c', "before decode");
 	    decode();
+		Lib.debug('c', "before execute");
 	    execute();
+		Lib.debug('c', "before writeBack");
 	    writeBack();
 	}	
 
@@ -627,7 +631,9 @@ public final class Processor {
 		System.out.print("PC=0x" + Lib.toHexString(registers[regPC])
 				 + "\t");
 
+	    Lib.debug('c', "before readMem");
 	    value = readMem(registers[regPC], 4);
+	    Lib.debug('c', "after readMem");
 	}
 	
 	private void decode() {

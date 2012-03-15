@@ -94,10 +94,7 @@ public class UserProcess {
 	 */
 	public void restoreState() {
 		Lib.debug('c', "restoreState()" + PID);
-		//mutex.acquire();
-		//PState myState = UserKernel.savedPStates.get(PID);
-		//Machine.processor().setPageTable(pageTable);
-		//mutex.release();
+		Machine.processor().setPageTable(pageTable);
 	}
 
 	/**
