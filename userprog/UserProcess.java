@@ -150,8 +150,7 @@ public class UserProcess {
 				i++;
 			}
 		}
-		int amount = 0;//UserKernel.readPhysMem(ppnArray, readOffset, length, data, offset)
-		return amount;
+		return ((UserKernel) Kernel.kernel).readPhysMem(ppnArray, readOffset, length, data, offset);
 	}
 
 	/**
@@ -206,8 +205,7 @@ public class UserProcess {
 				i++;
 			}
 		}
-		int amount = 0;//UserKernel.writePhysMem(ppnArray, readOffset, length, data, offset)
-		return amount;
+		return ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
 	}
 	
 
