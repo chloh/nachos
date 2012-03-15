@@ -618,7 +618,7 @@ public class UserProcess {
 				writeVirtualMemory(a1, exitStatus);
 				childIDs.remove(a0);
 				Lib.debug('j', "exiting join" + PID);
-				if (childExitStatus == 1) {
+				if (childExitStatus == 0) {
 					return 1;
 				} else {
 					return 0;
@@ -636,7 +636,7 @@ public class UserProcess {
 			}
 		} catch (Exception e) {
 			Lib.debug('j', "join error: "+e.getMessage());
-			return -1;
+			return 0;
 		}
 	}
 
