@@ -117,7 +117,7 @@ public class UserKernel extends ThreadedKernel {
 	console = new SynchConsole(Machine.console());
 	lock = new Lock();
 	PIDLock = new Lock();
-	savedPStates = new Hashtable<Integer, PState>();
+	//savedPStates = new Hashtable<Integer, PState>();
 	
 	
 	
@@ -223,7 +223,7 @@ public class UserKernel extends ThreadedKernel {
     
     // Adding the PIDLock here
     public static Lock PIDLock;// = new Lock();
-    public static Hashtable<Integer, PState> savedPStates;
+    //public static Hashtable<Integer, PState> savedPStates;
     
     private static int pageSize = Machine.processor().pageSize;
 }
