@@ -664,9 +664,6 @@ public class UserProcess {
 		int value = -1;
 		try {
 			Lib.debug('c', "calling open" + PID);
-			if (a0 >= 16 || a0 < 0) {
-				return -1;
-			}
 			String name = readVirtualMemoryString(a0,256);
 			OpenFile openFile = UserKernel.fileSystem.open(name, false);
 			if (openFile == null) {
@@ -698,6 +695,9 @@ public class UserProcess {
 	private int handleRead(int a0, int a1, int a2){
 		try {
 			Lib.debug('c', "calling read");
+			if (a0 >= 16 || a0 < 0) {
+				return -1;
+			}
 			if(FDs[a0] != null){
 				byte[] buffer = new byte[a2];
 				int pos = positions[a0];
@@ -706,7 +706,7 @@ public class UserProcess {
 				//FDs[a0].read(pos, buffer, 0, a2);
 				positions[a0] += amount;
 				Lib.debug('c', "exiting read" + PID);
-				int val = writeVirtualMemory(a1, buffer, 0, a2);
+				int val = writeVirtualMemory(a1, buffer, 0, amount);
 				return val;
 			} else {
 				return -1;
@@ -725,6 +725,9 @@ public class UserProcess {
 	 */
 	private int handleWrite(int a0, int a1, int a2){
 		try{
+			if (a0 >= 16 || a0 < 0) {
+				return -1;
+			}
 			Lib.debug('c', "calling write " + PID);
 			Lib.debug('c', "fd: " + a0);
 			Lib.debug('c', "vaddr: " + a1);
@@ -737,7 +740,10 @@ public class UserProcess {
 				int amount = readVirtualMemory( a1, buffer, 0, a2);
 				positions[a0] += amount;
 				Lib.debug('c', "what's in buffer now: "+new String(buffer));
-				int val = FDs[a0].write(buffer, start, amount);
+				int val = 0;
+				//for (int i = 0; i < amount; i++) {
+				val = FDs[a0].write(buffer, 0, amount);
+				//}
 				Lib.debug('c', "wrote out how much to FD "+a0+": "+val);
 				return val;
 			} else {
