@@ -255,6 +255,9 @@ public class UserProcess {
 			}
 			val = ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
 			Lib.debug('c', "Wrote this much to memory: "+ val);
+			if (val < length) {
+				return -1;
+			}
 			return ((UserKernel) Kernel.kernel).writePhysMem(ppnArray, writeOffset, length, data, offset);
 		} catch (Exception e) {
 			Lib.debug('c', "exception in writeVirtualMemory: "+e.getMessage());
