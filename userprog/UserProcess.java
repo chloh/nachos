@@ -566,7 +566,11 @@ public class UserProcess {
 			writeVirtualMemory(a1, exitStatus);
 			childIDs.remove(a0);
 			Lib.debug('c', "exiting join" + PID);
-			return 0;
+			if (childExitStatus == 0) {
+				return 1;
+			} else {
+				return 0;
+			}
 		} else {
 			return -1;
 		}
