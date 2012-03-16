@@ -111,6 +111,7 @@ public class UserProcess {
 	 */
 	public String readVirtualMemoryString(int vaddr, int maxLength) {
 		Lib.assertTrue(maxLength >= 0);
+		//if(!validAddress(vaddr)) {return null;}
 		Lib.debug('c', "readVirtualMemoryString");
 
 		byte[] bytes = new byte[maxLength+1];
@@ -138,6 +139,7 @@ public class UserProcess {
 	 * @return	the number of bytes successfully transferred.
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data) {
+		//if(validAddress(int vaddr));
 		return readVirtualMemory(vaddr, data, 0, data.length);
 	}
 
@@ -158,6 +160,7 @@ public class UserProcess {
 	public int readVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+		if (!validAddress(vaddr)){return 0;}
 		int val = 0;
 		try {
 			Lib.debug('c', "reading virtualMemory");
@@ -208,6 +211,7 @@ public class UserProcess {
 	 * @return	the number of bytes successfully transferred.
 	 */
 	public int writeVirtualMemory(int vaddr, byte[] data) {
+		//Lib.assertTrue(validAddress(int vaddr));
 		return writeVirtualMemory(vaddr, data, 0, data.length);
 	}
 
@@ -229,6 +233,7 @@ public class UserProcess {
 			int length) {
 		// TODO: don't change the pageTable bits until we have successfully written to them
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+		if(!validAddress(vaddr)){return 0;}
 		int val = 0;
 		try {
 			Lib.debug('c', "writing virtualMemory");
@@ -543,12 +548,18 @@ public class UserProcess {
 			int bytesRead = readVirtualMemory(a2, addr);
 			int startOfArgs = Lib.bytesToInt(addr, 0);
 			boolean success;
-			String str;
+			String str = null;
+			int stringSize = 256;
 			Lib.debug('e', "Before loop");
 			int currentArg = startOfArgs;
 			for(int i = 0; i < a1; i++){
 				Lib.debug('e', "In loop");
-				str = readVirtualMemoryString(currentArg,256);
+				
+				while(str == null && stringSize < numPages*pageSize){
+				  str = readVirtualMemoryString(currentArg,stringSize);
+				  stringSize = 2*stringSize;
+				}
+				
 				Lib.debug('e', "after reading virtual memory");
 				if (str == null) {
 					argv[i] = "";
@@ -756,6 +767,8 @@ public class UserProcess {
 			if (a0 >= 16 || a0 < 0) {
 				return -1;
 			}
+			//if(!validAddress(a1)){return 0;}
+			
 			Lib.debug('c', "calling write " + PID);
 			Lib.debug('c', "fd: " + a0);
 			Lib.debug('c', "vaddr: " + a1);
