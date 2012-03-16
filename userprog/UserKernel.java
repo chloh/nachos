@@ -30,7 +30,8 @@ public class UserKernel extends ThreadedKernel {
 			}
 		} else {
 			lock.release();
-			//return error;
+			int[] out = new int[0];
+			return out;
 		}
 		lock.release();
 		return arr; 
@@ -51,6 +52,8 @@ public class UserKernel extends ThreadedKernel {
 	public int readPhysMem(int[] ppnArray, int readOffset, int length, byte[] data, int writeOffset) {
 		int amount = 0;
 		try {
+			// TODO: check that bounds do not exceed memory
+			lock.acquire();
 			Lib.debug('c', "reading physical memory");
 			byte[] memory = Machine.processor().getMemory();
 			// determine where to start reading the memory
@@ -85,12 +88,16 @@ public class UserKernel extends ThreadedKernel {
 		} catch(Exception e) {
 			Lib.debug('c', "exception in readPhysMem: " + e.getMessage());
 			return amount;
+		} finally {
+			lock.release();
 		}
+		
 	}
 
 	public int writePhysMem(int[] ppnArray, int writeOffset, int length, byte[] data, int readOffset) {
 		int amount = 0;
 		try {
+			lock.acquire();
 			// TODO: check that bounds do not exceed memory
 			byte[] memory = Machine.processor().getMemory();
 			
@@ -125,6 +132,8 @@ public class UserKernel extends ThreadedKernel {
 		} catch(Exception e) {
 			Lib.debug('c', "writePhyMem had an exception: "+e.getMessage());
 			return amount;
+		} finally {
+			lock.release();
 		}
 	}
 
@@ -144,9 +153,6 @@ public class UserKernel extends ThreadedKernel {
 			pageList.add(i);
 		}
 		currentProcesses = new HashSet<Integer>();
-		//savedPStates = new Hashtable<Integer, PState>();
-
-
 
 		Lib.debug('c', "creating the UserKernel");
 
