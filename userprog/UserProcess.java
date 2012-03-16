@@ -514,7 +514,7 @@ public class UserProcess {
 			unloadSections();
 			coff.close(); 
 			Lib.debug('b', "after unloadSections: PID" + PID);
-			readyToJoin.V();
+			//readyToJoin.V();
 			UThread.finish();
 			return 0;
 		} catch (Exception e){
@@ -594,10 +594,10 @@ public class UserProcess {
 				if (child == null) {
 					return 0;
 				}
-				child.readyToJoin.P();
+				//child.readyToJoin.P();
 
 				Lib.debug('j', "joining on child");
-				//child.initialThread.join();
+				child.initialThread.join();
 				Lib.debug('j', "my PID: "+PID);
 				Lib.debug('j', "child done");
 				int childExitStatus = childIDsStatus.get(child.PID);
@@ -963,7 +963,7 @@ public class UserProcess {
 
 	// TODO: fill this in and use it where ever we use virtual addresses
 	boolean validAddress(int vaddr) {
-		return false;
+		return vaddr >= 0 && vaddr < numPages*pageSize;
 	}
 
 	/** The program being run by this process. */
