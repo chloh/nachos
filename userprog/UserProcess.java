@@ -521,6 +521,7 @@ public class UserProcess {
 			return 0;
 		} catch (Exception e){
 			Lib.debug('c', "handleExit: "+e.getMessage());
+			parent.childIDs.put(this.PID, null);
 			return -1;
 		}
 	}
@@ -597,7 +598,7 @@ public class UserProcess {
 			if (childIDs.containsKey(a0)) { 		
 				UserProcess child = childIDs.get(a0); //check if null
 				if (child == null) {
-					return -1;
+					return 0;
 				}
 				/*
 				if (child.initialThread == null) {
@@ -618,11 +619,12 @@ public class UserProcess {
 				writeVirtualMemory(a1, exitStatus);
 				childIDs.remove(a0);
 				Lib.debug('j', "exiting join: " + PID);
-				if (childExitStatus == 0) {
+				return 1; // yayyy
+				/*if (childExitStatus == 0) {
 					return 1;
 				} else {
 					return 0;
-				}
+				}*/
 			} else {
 				return -1;
 			}
