@@ -594,11 +594,6 @@ public class UserProcess {
 				if (child == null) {
 					return 0;
 				}
-				/*
-				if (child.initialThread == null) {
-					Lib.debug('j', "before ready to join");
-					child.readyToJoin.P();
-				}*/
 				child.readyToJoin.P();
 
 				Lib.debug('j', "joining on child");
@@ -614,12 +609,13 @@ public class UserProcess {
 				childIDs.remove(a0);
 				Lib.debug('j', "exiting join: " + PID);
 				return 1; // yayyy
-				/*if (childExitStatus == 0) {
-					return 1;
-				} else {
-					return 0;
-				}*/
-			} else {
+			} else if (childIDsStatus.containsKey(a0)){
+				int childExitStatus = childIDsStatus.get(a0);
+				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
+				writeVirtualMemory(a1, exitStatus);
+				return 1;
+			}
+			else {
 				return -1;
 			}
 		} catch (Exception e) {
