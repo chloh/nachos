@@ -487,7 +487,6 @@ public class UserProcess {
 				}
 			}
 
-
 			// disown children
 			for (UserProcess child : childIDs.values()) {
 				child.parent = null;
@@ -517,11 +516,12 @@ public class UserProcess {
 			Lib.debug('b', "after unloadSections: PID" + PID);
 			readyToJoin.V();
 			UThread.finish();
-			
 			return 0;
 		} catch (Exception e){
 			Lib.debug('c', "handleExit: "+e.getMessage());
 			parent.childIDs.put(this.PID, null);
+			readyToJoin.V();
+			// handleException(-1);
 			return -1;
 		}
 	}
@@ -534,13 +534,15 @@ public class UserProcess {
 	 * char* argv[]: pointer to an array of arguments
 	 */
 	private int handleExec(int a0, int a1, int a2){
+		UserProcess child = new UserProcess();
+		child.parent = this;
 		try {
 			Lib.debug('e', "calling exec" + PID);
 			String name = readVirtualMemoryString(a0,256);
 			int start = a2;
 			String[] argv = new String[a1];
-			UserProcess child = new UserProcess();
-			child.parent = this;
+			//UserProcess child = new UserProcess();
+			//child.parent = this;
 			Lib.debug('e', "name: " + name);
 			Lib.debug('e', "num arguments: " + a1);
 
@@ -552,15 +554,6 @@ public class UserProcess {
 			Lib.debug('e', "Before loop");
 			int currentArg = startOfArgs;
 			for(int i = 0; i < a1; i++){
-				// TODO: this parser is not getting the arguments correctly
-				//These are the arguments to the child process, they can
-				//be arbitrarily long so for each argv[i] we need to loop
-				//in the memory from the start position until we reach a 
-				//null terminator. Once we do, we update the start pointer
-				//so argv[i+1] starts reading from memory at the correct 
-				//place
-				// why are we not using readVirtualMemoryString here? It finds the null-terminator for us.
-				// readVirtualMemoryString(start, 256)
 				Lib.debug('e', "In loop");
 				str = readVirtualMemoryString(currentArg,256);
 				Lib.debug('e', "after reading virtual memory");
@@ -581,6 +574,7 @@ public class UserProcess {
 			Lib.debug('e', "exiting exec" + PID);
 			return child.PID;
 		} catch(Exception e) {
+			childIDs.put(child.PID, null);
 			return -1;
 		}
 	}
