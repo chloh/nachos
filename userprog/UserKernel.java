@@ -29,9 +29,10 @@ public class UserKernel extends ThreadedKernel {
 				arr[i] = pageList.removeFirst();
 			}
 		} else {
-			lock.release();
-			int[] out = new int[0];
-			return out;
+			//lock.release();
+			arr = new int[0];
+			//int[] out = new int[0];
+			//return out;
 		}
 		lock.release();
 		return arr; 
