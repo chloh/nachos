@@ -70,7 +70,7 @@ public class UserProcess {
 		}
 		Lib.debug('e', "before execute" + PID);
 		initialThread = new UThread(this);
-		readyToJoin.V();
+		//readyToJoin.V();
 		initialThread.setName(name);
 		initialThread.fork();
 
@@ -468,10 +468,10 @@ public class UserProcess {
 	private int handleExit(int a0){
 		try {
 			Lib.debug('b', "calling exit: PID" + PID);
-			if (a0 == -1) {
+			/*if (a0 == -1) {
 				parent.childIDsStatus.put(this.PID, a0); //a0 is status
 				return 0;
-			}
+			}*/
 			//terminate thread?
 			for (int i = 0; i < FDs.length; i++) {
 				if (FDs[i] != null) {
@@ -479,7 +479,6 @@ public class UserProcess {
 					FDs[i] = null;
 				}
 			}
-
 
 			// disown children
 			for (UserProcess child : childIDs.values()) {
@@ -506,12 +505,16 @@ public class UserProcess {
 			Lib.debug('b', "After termination: PID" + PID);
 			Lib.debug('b', "before unloadSections: PID" + PID);
 			unloadSections();
+			coff.close(); 
 			Lib.debug('b', "after unloadSections: PID" + PID);
-
+			//readyToJoin.V();
 			UThread.finish();
 			return 0;
 		} catch (Exception e){
 			Lib.debug('c', "handleExit: "+e.getMessage());
+			parent.childIDs.put(this.PID, null);
+			readyToJoin.V();
+			// handleException(-1);
 			return -1;
 		}
 	}
@@ -524,13 +527,15 @@ public class UserProcess {
 	 * char* argv[]: pointer to an array of arguments
 	 */
 	private int handleExec(int a0, int a1, int a2){
+		UserProcess child = new UserProcess();
+		child.parent = this;
 		try {
 			Lib.debug('e', "calling exec" + PID);
 			String name = readVirtualMemoryString(a0,256);
 			int start = a2;
 			String[] argv = new String[a1];
-			UserProcess child = new UserProcess();
-			child.parent = this;
+			//UserProcess child = new UserProcess();
+			//child.parent = this;
 			Lib.debug('e', "name: " + name);
 			Lib.debug('e', "num arguments: " + a1);
 
@@ -542,15 +547,6 @@ public class UserProcess {
 			Lib.debug('e', "Before loop");
 			int currentArg = startOfArgs;
 			for(int i = 0; i < a1; i++){
-				// TODO: this parser is not getting the arguments correctly
-				//These are the arguments to the child process, they can
-				//be arbitrarily long so for each argv[i] we need to loop
-				//in the memory from the start position until we reach a 
-				//null terminator. Once we do, we update the start pointer
-				//so argv[i+1] starts reading from memory at the correct 
-				//place
-				// why are we not using readVirtualMemoryString here? It finds the null-terminator for us.
-				// readVirtualMemoryString(start, 256)
 				Lib.debug('e', "In loop");
 				str = readVirtualMemoryString(currentArg,256);
 				Lib.debug('e', "after reading virtual memory");
@@ -571,6 +567,7 @@ public class UserProcess {
 			Lib.debug('e', "exiting exec" + PID);
 			return child.PID;
 		} catch(Exception e) {
+			childIDs.put(child.PID, null);
 			return -1;
 		}
 	}
@@ -588,12 +585,9 @@ public class UserProcess {
 			if (childIDs.containsKey(a0)) { 		
 				UserProcess child = childIDs.get(a0); //check if null
 				if (child == null) {
-					return -1;
+					return 0;
 				}
-				if (child.initialThread == null) {
-					Lib.debug('j', "before ready to join");
-					child.readyToJoin.P();
-				}
+				//child.readyToJoin.P();
 
 				Lib.debug('j', "joining on child");
 				child.initialThread.join();
@@ -603,20 +597,22 @@ public class UserProcess {
 				Lib.debug('j', "child exit status: "+childExitStatus);
 				//convert childExitStatus to array of bytes
 				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
-				//writeVirtualMemory(a1, childExitStatus);
+				//writeVirtuajlMemory(a1, childExitStatus);
 				writeVirtualMemory(a1, exitStatus);
 				childIDs.remove(a0);
-				Lib.debug('j', "exiting join" + PID);
-				if (childExitStatus == 0) {
-					return 1;
-				} else {
-					return 0;
-				}
-			} else {
+				Lib.debug('j', "exiting join: " + PID);
+				return 1; // yayyy
+			} else if (childIDsStatus.containsKey(a0)){
+				int childExitStatus = childIDsStatus.get(a0);
+				byte[] exitStatus = Lib.bytesFromInt(childExitStatus);
+				writeVirtualMemory(a1, exitStatus);
+				return 1;
+			}
+			else {
 				return -1;
 			}
 		} catch (Exception e) {
-			Lib.debug('j', "join error: "+e.getMessage());
+			Lib.debug('j', "join error: " + e.getMessage());
 			return -1;
 		}
 	}
@@ -795,6 +791,10 @@ public class UserProcess {
 	private int handleClose(int a0){
 		try {
 			Lib.debug('c', "calling close" + PID);
+			// added bullet proofing
+			if(a0 >= 16 || a0 < 0){
+				return -1;
+			}
 			if (FDs[a0] != null) {
 				FDs[a0].close();
 				FDs[a0] = null;
@@ -956,7 +956,7 @@ public class UserProcess {
 
 	// TODO: fill this in and use it where ever we use virtual addresses
 	boolean validAddress(int vaddr) {
-		return false;
+		return vaddr >= 0 && vaddr < numPages*pageSize;
 	}
 
 	/** The program being run by this process. */
