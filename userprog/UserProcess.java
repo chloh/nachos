@@ -475,10 +475,10 @@ public class UserProcess {
 			//return -1;
 			//}
 			Lib.debug('b', "calling exit: PID" + PID);
-			if (a0 == -1) {
+			/*if (a0 == -1) {
 				parent.childIDsStatus.put(this.PID, a0); //a0 is status
 				return 0;
-			}
+			}*/
 			//terminate thread?
 			for (int i = 0; i < FDs.length; i++) {
 				if (FDs[i] != null) {
